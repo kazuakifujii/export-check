@@ -1,8 +1,10 @@
 // 答え合わせ。正解つきの試験ケースを全部チェックにかけ、点数を出す。
 //
 //   npm run eval                      … eval/cases/ の公開ケース（架空の商品）
-//   npm run eval -- <フォルダ>         … 別の場所のケースも足す（手元だけの試験データなど）
+//   npm run eval -- <フォルダ か まとめた.json> … 別の場所のケースも足す（手元だけの試験データなど）
 //   npm run eval -- --only corn-01    … 1件だけ
+//   npm run eval -- <まとめた.json> --no-public … 手元のケースだけ
+//   npm run eval -- --list            … 採点するケースの一覧だけ出す（Claude は呼ばない）
 //
 // いちばん大事な数字は「見落とし」＝正解は「無い」（引っかかる）なのに、
 // 道具が「ある」「対象外」と言ってしまった行の数。これを 0 にする。
@@ -19,12 +21,22 @@ const args = process.argv.slice(2);
 const onlyIdx = args.indexOf("--only");
 const only = onlyIdx >= 0 ? args[onlyIdx + 1] : null;
 const extraDirs = args.filter((a, i) => !a.startsWith("--") && !(onlyIdx >= 0 && i === onlyIdx + 1));
-const dirs = [path.join(here, "cases"), ...extraDirs.map((d) => path.resolve(d))];
+const dirs = [...(args.includes("--no-public") ? [] : [path.join(here, "cases")]), ...extraDirs.map((d) => path.resolve(d))];
 const CONCURRENCY = Number(process.env.EVAL_CONCURRENCY || 2);
 
 function loadCases() {
   const cases = [];
   for (const dir of [...new Set(dirs)]) {
+    // 1つの .json に試験ケースの配列をまとめたもの（手元の試験データの受け渡し用）
+    if (dir.endsWith(".json") && fs.existsSync(dir)) {
+      for (const c of JSON.parse(fs.readFileSync(dir, "utf8"))) {
+        c._dir = path.dirname(dir);
+        c._file = path.basename(dir);
+        if (!c.expected || (only && c.id !== only)) continue;
+        cases.push(c);
+      }
+      continue;
+    }
     if (!fs.existsSync(dir)) {
       console.warn(`フォルダがありません：${dir}`);
       continue;
@@ -89,6 +101,10 @@ async function runCase(c) {
 
 async function main() {
   const cases = loadCases();
+  if (args.includes("--list")) {
+    for (const c of cases) console.log(c.id, c.name || "", Object.keys(c.expected).join(","));
+    return;
+  }
   if (!cases.length) {
     console.log("試験ケースが見つかりません。");
     return;
@@ -143,7 +159,7 @@ async function main() {
   const stamp = summary.when.replace(/[:.]/g, "-").slice(0, 19);
   const outDir = path.join(here, "results");
   fs.mkdirSync(outDir, { recursive: true });
-  const isPublic = dirs.length === 1;
+  const isPublic = extraDirs.length === 0;
   const base = path.join(outDir, `${stamp}${isPublic ? "" : "_手元"}`);
   fs.writeFileSync(`${base}.json`, JSON.stringify({ summary, results }, null, 2));
   fs.writeFileSync(`${base}.md`, toMarkdown(summary, results));
