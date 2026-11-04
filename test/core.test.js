@@ -96,3 +96,14 @@ test("EU-P2：アレルゲンの強調は「輸出用に足す」で出す", asy
   assert.equal(r.todo_kind, "輸出用の表示で足す");
   assert.equal(judgeEuEmphasis({ fullText: "りんご" }, {}, { status: "対象外" }), null);
 });
+
+test("見立て：入口で無理／現実的に厳しい／回避策がある／進められる見込み", async () => {
+  const { verdictOf } = await import("../src/check.js");
+  const it = (o) => ({ rowId: "X", title: "t", reason: "", workaround: "", hard: false, box: "製品", level: "問題なし", ...o });
+  assert.equal(verdictOf([it({})]).tier, "進められる見込み");
+  assert.equal(verdictOf([it({ level: "出せない", box: "入口" })]).tier, "入口で無理");
+  assert.equal(verdictOf([it({ level: "出せない" })]).tier, "現実的に厳しい");
+  assert.equal(verdictOf([it({ level: "出せない", workaround: "冷蔵にする" })]).tier, "回避策がある");
+  assert.equal(verdictOf([it({ level: "直せば出せる", hard: true, workaround: "冷蔵にする" })]).tier, "回避策がある");
+  assert.equal(verdictOf([it({ level: "直せば出せる", hard: true })]).tier, "現実的に厳しい");
+});

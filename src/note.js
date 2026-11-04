@@ -127,6 +127,9 @@ export function parseNote(markdown) {
       ifMissing,
       extra,
       level: levelFromText(ifMissing),
+      // 回避策と「現実的に厳しい」の印（(6)列の末尾に「回避策：〜」「【厳しい】」）
+      workaround: (ifMissing.match(/回避策[：:]\s*(.+)$/) || [])[1]?.replace(/\*\*/g, "").trim() || "",
+      hard: /【厳しい】/.test(ifMissing),
       marks,
       weak,
       dates: findDates([condition, exception, source].join(" ")),

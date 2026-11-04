@@ -185,6 +185,8 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
         todo: j.todo || "",
         decidedBy: j.decidedBy || "claude",
         ifMissing: row.ifMissing,
+        workaround: /^未確認/.test(row.workaround) ? "" : row.workaround,
+        hard: row.hard,
         source: row.source,
         urls: row.urls,
         weakSource: row.weak,
@@ -202,6 +204,7 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
       items,
       summary: summarize(items),
       tomorrow: tomorrowList(items),
+      verdict: verdictOf(items),
       ifStopped: ifStoppedList(items),
       checkedRows: items.length,
       noteRows: rows.length,
@@ -222,6 +225,18 @@ export const isAfterStop = (i) => AFTER_STOP_IDS.has(i.rowId) || /止められ�
 
 function ifStoppedList(items) {
   return items.filter(isAfterStop).map((i) => ({ rowId: i.rowId, title: i.title.replace(/\*\*/g, ""), text: i.todo || i.reason }));
+}
+
+// 一番上の見立て（藤井さんの決定 11/4）：入口で無理／現実的に厳しい／回避策がある／進められる見込み
+export function verdictOf(items) {
+  const blocking = items.filter((i) => i.level === "出せない" || (i.hard && ["直せば出せる", "出せない"].includes(i.level)));
+  if (!blocking.length) return { tier: "進められる見込み", items: [] };
+  const noWay = blocking.filter((i) => !i.workaround);
+  const entry = noWay.filter((i) => i.box === "入口");
+  const pick = (arr) => arr.map((i) => ({ rowId: i.rowId, title: i.title.replace(/\*\*/g, ""), reason: i.reason, workaround: i.workaround, hard: i.hard }));
+  if (entry.length) return { tier: "入口で無理", items: pick(entry) };
+  if (noWay.length) return { tier: "現実的に厳しい", items: pick(noWay) };
+  return { tier: "回避策がある", items: pick(blocking) };
 }
 
 function tomorrowList(items) {

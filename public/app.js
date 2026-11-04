@@ -388,12 +388,14 @@ function card(i) {
   const answer = i.answerKeys.length ? `<div class="q-label">答え：${i.answerKeys.map(esc).join("、")}</div>` : "";
   const nq = i.noteQuote ? `<div class="q-note">ノート：「${esc(i.noteQuote)}」</div>` : "";
   const link = i.urls[0] ? `<a href="${esc(i.urls[0])}" target="_blank" rel="noopener">出典</a>` : "";
+  const way = i.workaround && ["出せない", "直せば出せる"].includes(i.level) ? `<div class="way"><b>回避策：</b>${explain(i.workaround)}</div>` : "";
+  const hard = i.hard && ["出せない", "直せば出せる"].includes(i.level) ? `<span class="tag weak">現実的に厳しい</span>` : "";
   return `<article class="card ${LEVEL_CLASS[i.level]}" data-quote="${esc(i.labelQuote)}">
     <header><span class="badge ${LEVEL_CLASS[i.level]}">${esc(levelWord(i.level))}</span><b>${esc(i.rowId)}</b> ${explain(plainTitle(i.title))}</header>
     <p>${esc(i.reason)}</p>
     ${quote}${answer}${nq}${flags}
-    ${i.todo ? `<div class="todo">次に：${esc(i.todo)}</div>` : ""}
-    <footer>判定：${esc(i.status)} ${prog}${weak}${up} ${link}</footer>
+    ${i.todo ? `<div class="todo">次に：${esc(i.todo)}</div>` : ""}${way}
+    <footer>判定：${esc(i.status)} ${hard}${prog}${weak}${up} ${link}</footer>
   </article>`;
 }
 
@@ -441,7 +443,9 @@ function openOnePager() {
     const by = (lv) => c.items.filter((i) => i.level === lv);
     const ask = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, code) - qPriority(y, code));
     const docs = c.tomorrow["日本で取る書類"] || [];
-    return `<section class="op-col"><h3>${esc(c.name)}</h3>
+    const v = c.verdict || { tier: "進められる見込み", items: [] };
+    return `<section class="op-col"><h3>${esc(c.name)}　<span class="tier-s">${esc(v.tier)}</span></h3>
+      ${v.items.length ? `<ul>${v.items.map((x) => `<li>${esc(plainTitle(x.title))}${x.workaround ? `<br><small>回避策：${esc(x.workaround)}</small>` : ""}</li>`).join("")}</ul>` : ""}
       <p class="op-count"><span class="g-stop">出荷できない条件 ${c.summary["出せない"]}</span>／<span class="g-fix">直す所 ${c.summary["直せば出せる"]}</span>／<span class="g-ask">確かめること ${c.summary["確認が必要"]}</span></p>
       <h4>出荷できない条件</h4>${list(by("出せない"), (i) => `<li>${esc(plainTitle(i.title))}<br><small>${esc(i.todo || i.reason)}</small></li>`)}
       <h4>直す所（表示・登録・証明書）</h4>${list(by("直せば出せる"), (i) => `<li>${esc(plainTitle(i.title))}${i.todo ? `<br><small>${esc(i.todo)}</small>` : ""}</li>`)}
@@ -491,17 +495,20 @@ function renderAnnotated(c) {
 // 一番上の「見立てと次の一歩」（議論の結論 11/4：主役は輸出の可能性と次の一歩。確率は出さない）
 function outlook(c) {
   const name = esc(c.name);
-  const stops = c.items.filter((i) => i.level === "出せない");
+  const v = c.verdict || { tier: "進められる見込み", items: [] };
   const qs = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
-  let body;
-  if (stops.length) {
-    const s0 = stops[0];
-    body = `<p class="ol-main ol-stop">いまの仕様のままでは、${name}へは進めません。</p>
-      <p>進むには「${explain(plainTitle(s0.title))}」${stops.length > 1 ? `ほか${stops.length - 1}件` : ""}の条件を変える必要があります。${s0.todo ? explain(s0.todo) + "。" : ""}変えられるか、輸入者と相談しましょう。</p>`;
-  } else {
-    const q0 = qs[0];
-    body = `<p class="ol-main ol-go">${name}への輸出に向けて。今回確認した範囲では、輸出を妨げる条件は見つかっていません。</p>
-      ${q0 ? `<p><b>まず確かめること：</b>${explain(q0.question)}（${esc(whoGroup(q0.askWho, q0.todoKind))}へ）。結果によって、進められるか、何を変えるかが分かります。</p>` : ""}`;
-  }
-  return `<div class="outlook">${body}<p class="hint">この結果は輸出相談の準備用です。未確認の条件もあるため、出荷前に輸入者と最終確認してください。</p></div>`;
+  const q0 = qs[0];
+  const first = q0 ? `<p><b>まず確かめること：</b>${explain(q0.question)}（${esc(whoGroup(q0.askWho, q0.todoKind))}へ）。結果によって、進められるか、何を変えるかが分かります。</p>` : "";
+  const li = (x, withWay) => `<li><b>${explain(plainTitle(x.title))}</b>${x.reason ? `<div class="why">${explain(x.reason)}</div>` : ""}${withWay && x.workaround ? `<div class="way"><b>回避策：</b>${explain(x.workaround)}</div>` : ""}</li>`;
+  const MSG = {
+    入口で無理: [`ol-stop`, `${name}へは、この商品は入口で止まります。`, `国として受け入れを止めている条件に当たります。今のところ回避策は見つかっていません。ほかの国を検討しましょう。`],
+    現実的に厳しい: [`ol-hard`, `${name}へは、現実的に厳しい条件があります。`, `制度の上では道があっても、今のところ現実的な回避策が見つかっていない条件です。進めるなら、輸入者や専門家と、できるかどうかから相談しましょう。`],
+    回避策がある: [`ol-way`, `${name}へは、このままでは進めませんが、回避策があります。`, `下の回避策を取れるか、代わりに何が起きるかを含めて、社内と輸入者で相談しましょう。`],
+    進められる見込み: [`ol-go`, `${name}への輸出は、進められる見込みです。`, `今回確認した範囲では、輸出を妨げる条件は見つかっていません。下の「直す所」と「確かめること」を片づけていきましょう。`],
+  }[v.tier];
+  return `<div class="outlook ${MSG[0]}"><span class="tier">${esc(v.tier)}</span>
+    <p class="ol-main">${MSG[1]}</p><p>${MSG[2]}</p>
+    ${v.items.length ? `<ul class="ol-list">${v.items.map((x) => li(x, v.tier === "回避策がある")).join("")}</ul>` : ""}
+    ${first}
+    <p class="hint">この結果は輸出相談の準備用です。未確認の条件もあるため、出荷前に輸入者と最終確認してください。</p></div>`;
 }

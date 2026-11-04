@@ -172,3 +172,12 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .outlook p { margin: 3px 0; } .ol-main { font-size: 16px; font-weight: 700; } .ol-stop { color: var(--stop); } .ol-go { color: var(--accent); }
 .al-none { color: var(--muted); font-size: 12px; line-height: 2; }
 .al-photo img { max-width: 360px; border-radius: 6px; margin-top: 6px; }
+
+.outlook .tier { display: inline-block; font-size: 12px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 10px; padding: 1px 10px; }
+.outlook.ol-stop { border-color: var(--stop); background: var(--stop-bg); } .outlook.ol-stop .tier { background: var(--stop); } .outlook.ol-stop .ol-main { color: var(--stop); }
+.outlook.ol-hard { border-color: var(--fix); background: var(--fix-bg); } .outlook.ol-hard .tier { background: var(--fix); } .outlook.ol-hard .ol-main { color: var(--fix); }
+.outlook.ol-way { border-color: var(--ask); background: var(--ask-bg); } .outlook.ol-way .tier { background: var(--ask); } .outlook.ol-way .ol-main { color: var(--ask); }
+.outlook.ol-go .tier { background: var(--ok); } .outlook.ol-go .ol-main { color: var(--ok); }
+.ol-list { margin: 6px 0; padding-left: 1.2em; font-size: 14px; }
+.way { background: #fff; border: 1px dashed var(--ask); border-radius: 6px; padding: 4px 8px; margin-top: 4px; font-size: 13px; }
+.tier-s { font-size: 12px; background: var(--accent); color: #fff; border-radius: 10px; padding: 1px 8px; vertical-align: middle; }
