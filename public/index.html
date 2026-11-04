@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>輸出チェック</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>輸出チェック</h1>
+    <p>食品ラベルを、米国・EU・中国の決まりノートで<strong>1行も飛ばさず</strong>当てはめます</p>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="check">チェック</button>
+    <button class="tab" data-tab="note">決まりノート</button>
+  </nav>
+</header>
+
+<main>
+<section id="tab-check" class="tabpane active">
+  <div class="input-grid">
+    <div class="panel">
+      <h2><span class="step">1</span>ラベルを入れる</h2>
+      <div class="drop" id="drop">
+        <input type="file" id="file" accept="image/*" hidden>
+        <p>ラベルの写真をここに置くか、<button class="link" id="pick">写真を選ぶ</button></p>
+        <img id="preview" alt="" hidden>
+      </div>
+      <details>
+        <summary>写真の代わりに、ラベルの文字を貼る</summary>
+        <textarea id="labelText" rows="8" placeholder="名称：…&#10;原材料名：…"></textarea>
+      </details>
+      <button class="ghost" id="sample">見本の商品を入れる（架空の「とうもろこしごはんの素」）</button>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step">2</span>国と、分かっていること</h2>
+      <div class="countries">
+        <label><input type="checkbox" name="country" value="US" checked> 米国</label>
+        <label><input type="checkbox" name="country" value="EU" checked> EU</label>
+        <label><input type="checkbox" name="country" value="CN" checked> 中国</label>
+      </div>
+      <p class="hint">分からない所は空のままで大丈夫です。必要なときだけ、あとで聞き返します。</p>
+      <div class="answers" id="answers">
+        <label>作る場所<select data-key="作る場所"><option value=""></option><option>自社工場</option><option>委託先の工場</option></select></label>
+        <label>保存<select data-key="保存"><option value=""></option><option>常温</option><option>冷蔵</option><option>冷凍</option></select></label>
+        <label>主な原料の産地（都道府県）<input data-key="主な原料の産地" placeholder="例：北海道"></label>
+        <label>英語ラベルを貼る場所<input data-key="英語ラベルを貼る場所" placeholder="例：商社の倉庫（日本）"></label>
+        <label>pH<input data-key="pH" inputmode="decimal" placeholder="例：5.8"></label>
+        <label>水分活性（Aw）<input data-key="Aw" inputmode="decimal" placeholder="例：0.97"></label>
+      </div>
+      <div class="asof"><label>判定日 <input type="date" id="asOf"></label></div>
+      <button class="primary" id="run">チェックする</button>
+      <p class="status" id="status"></p>
+    </div>
+  </div>
+
+  <div id="result" hidden>
+    <div class="result-grid">
+      <aside class="panel label-pane">
+        <h2>読み取ったラベル</h2>
+        <ol id="labelLines" class="label-lines"></ol>
+        <p class="hint">右の判定にマウスを乗せると、根拠にした行が光ります。</p>
+      </aside>
+      <div class="panel">
+        <div class="country-tabs" id="countryTabs"></div>
+        <div id="countryBody"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-note" class="tabpane">
+  <div class="panel">
+    <h2>決まりノート</h2>
+    <p class="hint" id="noteMeta"></p>
+    <p class="hint">判定はこのノートの行だけを根拠にします。ノートのファイルを直すと、次のチェックからそのまま使われます。</p>
+    <div class="note-filter">
+      <input id="noteSearch" placeholder="行を探す（例：ごま、登録番号）">
+    </div>
+    <div id="noteTable"></div>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  判断の手助けです。出荷の前に、行ごとの出典と窓口（JETRO など）で必ず確かめてください。
+</footer>
+<script src="samples.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
