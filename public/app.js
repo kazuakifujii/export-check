@@ -38,13 +38,6 @@ function setImage(file) {
   reader.readAsDataURL(file);
 }
 
-$("#sample").addEventListener("click", () => {
-  state.image = null;
-  $("#preview").hidden = true;
-  $("#labelText").value = window.SAMPLES.corn.text;
-  state.labelDirty = true;
-  setStatus("見本の商品（架空の「とうもろこしごはんの素」）を入れました。調べたい国のボタンを押してください。");
-});
 
 function collectAnswers() {
   const concern = $("#concern").value.trim();
