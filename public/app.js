@@ -169,6 +169,10 @@ function emptyBox(c, key, naCount) {
   return `<p class="none-box">今回の確認では、特に指摘はありません。未確認の条件は、別に確かめてください。${naCount ? `（当てはまらない項目 ${naCount}件は、下にまとめています）` : ""}</p>`;
 }
 
+const boxLabel = (key) => (BOX_ORDER.find((b) => b[0] === key) || [key, key])[1];
+const BOX_SHORT = { 入口: "入口", 製品: "製品", 交差: "この製品だから", 施設: "施設" };
+const boxTag = (key) => `<span class="btag box-${key}">${esc(BOX_SHORT[key] || key)}</span>`;
+
 function renderCountry(c) {
   const s = c.summary;
   const f = state.filter;
@@ -236,16 +240,18 @@ function renderCountry(c) {
       const why = fields.map((f) => f.why).filter(Boolean).join(" ") || i.questionWhy || i.reason;
       const who = whoGroup(i.askWho, i.todoKind);
       if (firstThree.length < 3) { firstThree.push(qHtml(i, inputs, why, who)); return; }
-      if (!groups.has(who)) groups.set(who, []);
-      groups.get(who).push(`<div class="q"><div>
-        <div class="q-topic">${explain(plainTitle(i.title))} <small>${esc(i.rowId)}</small></div>
+      // 分け方：聞く相手ごと（既定）か、要件の区分ごと（藤井さん 11/4）
+      const gk = state.qView === "box" ? boxLabel(i.box) : who;
+      if (!groups.has(gk)) groups.set(gk, []);
+      groups.get(gk).push(`<div class="q"><div>
+        <div class="q-topic">${state.qView === "box" ? "" : boxTag(i.box)}${explain(plainTitle(i.title))} <small class="rid">${esc(i.rowId)}</small></div>
         <div class="q-ask">${explain(i.question)}</div>
         ${why ? `<div class="why"><b>なぜ聞くか：</b>${explain(why)}</div>` : ""}
       </div><div class="qin">${inputs}</div></div>`);
     });
-    const order = [...WHO_GROUPS.map((g) => g[0]), "そのほか"];
+    const order = state.qView === "box" ? BOX_ORDER.map((b) => boxLabel(b[0])) : [...WHO_GROUPS.map((g) => g[0]), "そのほか"];
     const rowsHtml = order.filter((w) => groups.has(w)).map((w) =>
-      `<details class="qgroup"><summary>${esc(w)}に聞く ${groups.get(w).length}つ</summary>${groups.get(w).join("")}</details>`).join("");
+      `<details class="qgroup"><summary>${esc(w)}${state.qView === "box" ? "" : "に聞く"} ${groups.get(w).length}つ</summary>${groups.get(w).join("")}</details>`).join("");
     const firstHtml = firstThree.join("");
     const decided = c.items.length - qs.length;
     const rest = qs.length - firstThree.length;
@@ -253,7 +259,7 @@ function renderCountry(c) {
       <p class="progress">まずこの${firstThree.length}件です${rest > 0 ? `（残り${rest}件）` : ""}。</p>
       <p class="hint">一人で全部答えなくて大丈夫。分かった所から入れてください。</p>
       ${firstHtml}
-      ${rest > 0 ? `<p class="hint" style="margin-top:12px">残りは、聞く相手ごとにまとめています。</p>` : ""}
+      ${rest > 0 ? `<div class="qsw"><span class="hint">残りの${rest}件の分け方：</span><button class="ghost ${state.qView !== "box" ? "on" : ""}" data-qv="who">聞く相手ごと</button><button class="ghost ${state.qView === "box" ? "on" : ""}" data-qv="box">要件の区分ごと</button></div>` : ""}
       ${rowsHtml}
       <button class="primary" id="rerun">答えて、もう一度チェック</button></section>`;
   }
@@ -305,6 +311,10 @@ function renderCountry(c) {
     window.open("https://claude.ai/new", "_blank", "noopener");
   });
   const rerun = $("#rerun");
+  document.querySelectorAll(".qsw button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("[data-q]").forEach((el) => { if (el.value.trim()) state.extraAnswers[el.dataset.q] = el.value.trim(); });
+    state.qView = b.dataset.qv; renderResult();
+  }));
   document.querySelectorAll(".rerun2").forEach((b) => b.addEventListener("click", () => {
     b.closest(".usask").querySelectorAll("[data-q]").forEach((el) => {
       if (el.value.trim()) state.extraAnswers[el.dataset.q] = el.value.trim();
@@ -419,7 +429,7 @@ function qPriority(i, code) {
 }
 function qHtml(i, inputs, why, who) {
   return `<div class="q"><div>
-    <div class="q-topic">${explain(plainTitle(i.title))} <small>${esc(i.rowId)}・${esc(who)}に聞く</small></div>
+    <div class="q-topic">${boxTag(i.box)}${explain(plainTitle(i.title))} <small>${esc(who)}に聞く</small> <small class="rid">${esc(i.rowId)}</small></div>
     <div class="q-ask">${explain(i.question)}</div>
     ${why ? `<div class="why"><b>なぜ聞くか：</b>${explain(why)}</div>` : ""}
   </div><div class="qin">${inputs}</div></div>`;

@@ -195,3 +195,4 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .a3-head { flex-direction: column; align-items: flex-start; gap: 2px; } .a3-wall { font-size: 12px; } .al-band .al-line { font-weight: 700; color: var(--text, #222) !important; background: #fdecea !important; border-style: solid; } .a3-more summary { font-size: 12px; color: var(--accent); cursor: pointer; }
 .usclass .usask { margin-top: 8px; padding: 8px; background: #fff; border-radius: 6px; font-size: 14px; } .usclass .qin { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; } .usclass .rerun2 { margin-top: 8px; }
 .usclass .qf input { min-width: 280px; }
+.qsw { margin-top: 12px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; } .qsw .on { background: #222; color: #fff; } .btag { display: inline-block; font-size: 11px; border: 1px solid var(--line); border-radius: 8px; padding: 0 6px; margin-right: 6px; color: var(--muted); vertical-align: middle; }
