@@ -225,7 +225,7 @@ function summarize(items) {
 // 出すと決めた後の段取り（出せるかどうかは左右しない行）。「確かめること」から外し、閉じた欄にまとめる
 // （藤井さん 11/4「本筋から離れてない？」。線引きは議論で詰める）
 export const SETUP_IDS = new Set([
-  "US-F2", "US-F3", "US-F6", "US-F7", "US-F9", "US-F10", "US-F11", "US-F12", "US-F13", "US-F14", "US-F15", "US-F16", "US-F17",
+  "US-F2", "US-F3", "US-F7", "US-F9", "US-F11", "US-F12", "US-F14", "US-F15", "US-F16", "US-F17",
   "US-X9", "US-X12", "US-P23",
   "EU-F6",
   "CN-F3", "CN-F5", "CN-F7", "CN-X2", "CN-X5", "CN-X9", "CN-P6", "CN-P9",
