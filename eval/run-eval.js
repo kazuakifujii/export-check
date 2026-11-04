@@ -2,7 +2,7 @@
 //
 //   npm run eval                      … eval/cases/ の公開ケース（架空の商品）
 //   npm run eval -- <フォルダ か まとめた.json> … 別の場所のケースも足す（手元だけの試験データなど）
-//   npm run eval -- --only corn-01    … 1件だけ
+//   npm run eval -- --only corn-01,kombu-02 … 指定した件だけ（カンマ区切り）
 //   npm run eval -- <まとめた.json> --no-public … 手元のケースだけ
 //   npm run eval -- --list            … 採点するケースの一覧だけ出す（Claude は呼ばない）
 //
@@ -19,7 +19,7 @@ import { loadNote } from "../src/note.js";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const onlyIdx = args.indexOf("--only");
-const only = onlyIdx >= 0 ? args[onlyIdx + 1] : null;
+const only = onlyIdx >= 0 ? new Set(args[onlyIdx + 1].split(",")) : null;
 const extraDirs = args.filter((a, i) => !a.startsWith("--") && !(onlyIdx >= 0 && i === onlyIdx + 1));
 const dirs = [...(args.includes("--no-public") ? [] : [path.join(here, "cases")]), ...extraDirs.map((d) => path.resolve(d))];
 const CONCURRENCY = Number(process.env.EVAL_CONCURRENCY || 2);
@@ -32,7 +32,7 @@ function loadCases() {
       for (const c of JSON.parse(fs.readFileSync(dir, "utf8"))) {
         c._dir = path.dirname(dir);
         c._file = path.basename(dir);
-        if (!c.expected || (only && c.id !== only)) continue;
+        if (!c.expected || (only && !only.has(c.id))) continue;
         cases.push(c);
       }
       continue;
@@ -46,7 +46,7 @@ function loadCases() {
       c._dir = dir;
       c._file = f;
       if (!c.expected) continue;
-      if (only && c.id !== only) continue;
+      if (only && !only.has(c.id)) continue;
       cases.push(c);
     }
   }
@@ -168,6 +168,8 @@ async function main() {
   console.log(`一致 ${summary.一致}/${summary.judgedRows}（${summary.一致率}%）`);
   console.log(`見落とし ${summary.見落とし}（引っかかる ${summary.引っかかる行}行のうち、拾えた ${summary.引っかかる行を拾えた}・確認に回した ${summary.確認に回した}）`);
   console.log(`空振り ${summary.空振り} ／ その他のずれ ${summary.ずれ} ／ AIが答えなかった行 ${summary.AIが答えなかった行}`);
+  const usd = (summary.tokens.input * 4 + summary.tokens.output * 20) / 1e6;
+  console.log(`使った量：入力 ${summary.tokens.input.toLocaleString()} ／ 出力 ${summary.tokens.output.toLocaleString()} トークン（claude-opus-5-5 の定価でおよそ $${usd.toFixed(2)}、1件あたり $${(usd / Math.max(1, results.length)).toFixed(2)}）`);
   console.log(`結果：${base}.md`);
 }
 
