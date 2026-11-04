@@ -575,7 +575,7 @@ function usClassBand(c) {
   const u = c.usClass;
   if (!u) return "";
   const lacf = u.cls === "低酸性缶詰食品", af = u.cls === "酸性化食品";
-  const tone = lacf || af ? "ol-way" : ["分からない", "農務省の管轄の見込み", "ジュースのHACCP"].includes(u.cls) ? "ol-hard" : "ol-go";
+  const tone = lacf || af ? "ol-way" : u.cls === "分からない" || (u.also || []).length ? "ol-hard" : "ol-go";
   // 言い方：数値で決まる物は「数値次第で」、条文で決まる物（冷蔵など）は言い切る（議論 11/4）
   const head = {
     低酸性缶詰食品: u.sure ? "米国の「低酸性缶詰食品」に当たります。" : "常温の密封・加熱殺菌品です。数値次第で、米国の「低酸性缶詰食品」に当たります。",
@@ -590,11 +590,11 @@ function usClassBand(c) {
   const needs = US_CLASS_NEEDS[u.cls] || [];
   const row = c.items.find((i) => i.rowId === (af ? "US-X2" : "US-X1"));
   const ways = lacf || af ? shortWays(row?.workaround).map((w) => (/冷蔵/.test(w.head) ? { ...w, remain: [w.remain, "米国内の輸送・保管・店頭まで冷蔵を守れるか、輸入者に確かめるのが前提"].filter(Boolean).join("、") } : w)) : [];
-  const ask = !u.sure && !["冷蔵・冷凍", "農務省の管轄の見込み"].includes(u.cls);
+  const ask = !u.sure && u.cls !== "冷蔵・冷凍";
   const inp = (key, label, ph) => `<label class="qf"><span>${label}</span><input data-q="${key}" placeholder="${ph}" value="${esc(state.extraAnswers[key] || "")}"></label>`;
   return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p>${burden}
     ${ask ? `<p><b>工場に聞くこと：</b>${u.needSealedQuestion ? "密封して加熱殺菌しているか、" : ""}完成品の pH と水分活性。入れると、当たるかどうかが決まります。</p>` : ""}
-    ${(u.also || []).map((a) => `<p><b>あわせて：</b>${explain(a)}</p>`).join("")}
+    ${(u.also || []).length ? `<div class="way"><b>商品の種類で、ほかにも当たる決まり</b><ul>${u.also.map((a) => `<li>${explain(a)}</li>`).join("")}</ul></div>` : ""}
     ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
     <details class="more"><summary>くわしく</summary><p>${explain(u.why)}</p>${needs.length ? `<p><b>当たると要るもの</b></p><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul>` : ""}</details>
     ${ask ? `<div class="usask"><b>品質管理の担当に聞いて、入れてください</b>（「この商品の完成品の pH と水分活性を教えてください」）
