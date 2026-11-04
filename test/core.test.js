@@ -1,7 +1,7 @@
 // 鍵（API）なしで確かめられる所の試験。 npm test
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadNote, parseNote } from "../src/note.js";
+import { loadNote, parseNote, rowsForCountry } from "../src/note.js";
 import { readLabelText } from "../src/read-label.js";
 import { judgeChinaOrigin, judgeUsLacf } from "../src/rules.js";
 import { runCheck } from "../src/check.js";
@@ -64,7 +64,7 @@ test("総当たり：答えが返らなかった行も、根拠の合わない�
   });
   const r = await runCheck({ label, countries: ["US"], judge: fakeJudge, asOf: "2026-11-04" });
   const us = r.countries.US;
-  assert.equal(us.items.length, note.rows.filter((x) => x.country === "US").length, "全部の行がある");
+  assert.equal(us.items.length, rowsForCountry(note, "US").length, "全部の行がある");
   const p1 = us.items.find((i) => i.rowId === "US-P1");
   assert.equal(p1.status, "無い");
   assert.equal(p1.level, "直せば出せる");
