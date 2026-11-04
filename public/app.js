@@ -38,6 +38,13 @@ function setImage(file) {
   reader.readAsDataURL(file);
 }
 
+$("#sample").addEventListener("click", () => {
+  state.image = null;
+  $("#preview").hidden = true;
+  $("#labelText").value = window.SAMPLES.corn.text;
+  state.labelDirty = true;
+  setStatus("サンプル（架空の「とうもろこしごはんの素」）のラベルを入れました。調べたい国のボタンを押してください。");
+});
 
 function collectAnswers() {
   const concern = $("#concern").value.trim();
@@ -219,7 +226,13 @@ function renderCountry(c) {
       list.length ? list.map((t) => `<li><span class="mini ${LEVEL_CLASS[t.level]}"></span>${esc(t.text)} <em>${esc(t.rowId)}</em></li>`).join("") : "<li class='hint'>なし</li>"
     }</ul></div>`;
   }
-  html += `</div></section>`;
+  html += `</div>`;
+  if (c.ifStopped?.length) {
+    html += `<details class="ifstopped"><summary>もし港で止められたら（${c.ifStopped.length}）</summary><ul>${c.ifStopped
+      .map((t) => `<li><b>${esc(t.title)}</b>：${explain(t.text)} <em>${esc(t.rowId)}</em></li>`)
+      .join("")}</ul></details>`;
+  }
+  html += `</section>`;
 
   const concern = state.lastConcern;
   if (concern) {

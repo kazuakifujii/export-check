@@ -197,6 +197,7 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
       items,
       summary: summarize(items),
       tomorrow: tomorrowList(items),
+      ifStopped: ifStoppedList(items),
       checkedRows: items.length,
       noteRows: rows.length,
     };
@@ -210,10 +211,19 @@ function summarize(items) {
   return s;
 }
 
+// 止められた後の期限の行は「明日やること」に入れず、「もし港で止められたら」として別に出す（設計の決定 11/4）
+const AFTER_STOP_IDS = new Set(["US-F18", "EU-F7", "CN-X7"]);
+export const isAfterStop = (i) => AFTER_STOP_IDS.has(i.rowId) || /止められた後|不合格になった後/.test(i.title || "");
+
+function ifStoppedList(items) {
+  return items.filter(isAfterStop).map((i) => ({ rowId: i.rowId, title: i.title.replace(/\*\*/g, ""), text: i.todo || i.reason }));
+}
+
 function tomorrowList(items) {
   const lists = { 輸入者に聞く: [], 日本で取る書類: [], 出荷ごと: [] };
   for (const i of items) {
     if (i.status === "対象外") continue;
+    if (isAfterStop(i)) continue;
     if (!lists[i.todoKind]) continue;
     const text = i.todo || i.question;
     if (!text) continue;
