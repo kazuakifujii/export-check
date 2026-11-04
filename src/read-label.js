@@ -68,7 +68,7 @@ export async function readLabelImage({ base64, mediaType }) {
       { type: "text", text: "このラベルを書き写してください。" },
     ],
   });
-  return { ...normalizeLabel(data), fromImage: true, usage };
+  return { ...normalizeLabel(data), usage };
 }
 
 // 文字で渡されたラベル（試験データなど）は、そのまま行に分ける

@@ -89,11 +89,10 @@ test("中国の入口：10都県とそれ以外が混ざれば「分からない
   assert.equal(judgeChinaOrigin(kyoto, {}), null); // 京都府は東京都ではない
 });
 
-test("EU-P2：文字だけのラベルでは強調を「分からない」にする", async () => {
+test("EU-P2：アレルゲンの強調は「輸出用に足す」で出す", async () => {
   const { judgeEuEmphasis } = await import("../src/rules.js");
-  assert.equal(judgeEuEmphasis({ fullText: "小麦" }, {}, { status: "ある" }).status, "分からない");
-  assert.equal(judgeEuEmphasis({ fullText: "小麦" }, {}, { status: "対象外" }), null);
-  assert.equal(judgeEuEmphasis({ fromImage: true }, {}, { status: "ある" }), null);
-  assert.equal(judgeEuEmphasis({}, { "アレルゲンの強調": "太字や色で目立たせている" }, {}).status, "ある");
-  assert.equal(judgeEuEmphasis({}, { "アレルゲンの強調": "目立たせていない" }, {}).status, "無い");
+  const r = judgeEuEmphasis({ fullText: "小麦" }, {}, { status: "ある" });
+  assert.equal(r.status, "無い");
+  assert.equal(r.todo_kind, "輸出用の表示で足す");
+  assert.equal(judgeEuEmphasis({ fullText: "りんご" }, {}, { status: "対象外" }), null);
 });
