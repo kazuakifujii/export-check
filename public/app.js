@@ -249,12 +249,21 @@ function renderCountry(c) {
       <button class="primary" id="rerun">答えて、もう一度チェック</button></section>`;
   }
 
-  html += `<section class="tomorrow"><h3>明日やること</h3><div class="tgrid">`;
-  for (const [k, sub] of [["輸入者に聞く", "相手の国の輸入者に確かめる"], ["日本で取る書類", "工場の登録・証明書"], ["出荷ごと", "荷物を出すたびに"]]) {
-    const list = c.tomorrow[k];
-    html += `<div><h4>${k}<small>${sub}</small></h4><ul>${
-      list.length ? list.map((t) => `<li><span class="mini ${LEVEL_CLASS[t.level]}"></span>${esc(t.text)} <em>${esc(t.rowId)}</em></li>`).join("") : "<li class='hint'>なし</li>"
-    }</ul></div>`;
+  // 明日やること：出せるかどうかを決めるために、誰に何を聞くか・取るか。段取りは下の「出すと決めたら」へ。
+  // 文は短い見出しだけ。くわしい「やること」は開いたら見える（藤井さん 11/4：書き方の工夫）
+  const tm = c.items.filter((i) => !i.setup && i.level !== "対象外" && i.level !== "問題なし" && !isAfterStopItem(i));
+  const TCOLS = [
+    ["輸入者に聞く", (i) => i.todoKind === "輸入者に聞く" || i.askWho === "相手の国の輸入者"],
+    ["工場・仕入先に聞く", (i) => ["工場の品質管理の担当", "原料の仕入れ先"].includes(i.askWho) && i.todoKind !== "日本で取る書類"],
+    ["日本で取る登録・書類", (i) => i.todoKind === "日本で取る書類"],
+  ];
+  const usedT = new Set();
+  html += `<section class="tomorrow"><h3>明日やること</h3><p class="hint">出せるかどうかを決めるために、まず聞くこと・取るものです。</p><div class="tgrid">`;
+  for (const [k, test] of TCOLS) {
+    const list = tm.filter((i) => !usedT.has(i.rowId) && test(i)).sort((x, y) => (ORDER_LV[x.level] ?? 9) - (ORDER_LV[y.level] ?? 9));
+    list.forEach((i) => usedT.add(i.rowId));
+    const li = (i) => `<li><details><summary><span class="mini ${LEVEL_CLASS[i.level]}"></span>${explain(plainTitle(i.title))}</summary><div class="hint">${explain(i.todo || i.question || "")} <span class="rid">${esc(i.rowId)}</span></div></details></li>`;
+    html += `<div><h4>${k}</h4><ul>${list.length ? list.slice(0, 4).map(li).join("") + (list.length > 4 ? `<li class="hint">ほか${list.length - 4}件（上の表で）</li>` : "") : "<li class='hint'>なし</li>"}</ul></div>`;
   }
   html += `</div>`;
   // 出すと決めた後の段取り。出せるかどうかは左右しないので、閉じておく
@@ -262,7 +271,7 @@ function renderCountry(c) {
   if (setup.length && !f) {
     html += `<details class="ifstopped setup"><summary>出すと決めたら：出荷の段取り（${setup.length}件）</summary>
       <p class="hint">出せるかどうかを決める話ではありません。輸出すると決めてから、輸入者や通関業者と進めます。</p><ul>${setup
-      .map((i) => `<li><b>${explain(plainTitle(i.title))}</b>：${explain(i.todo || i.question || i.reason)} <em>${esc(i.rowId)}</em></li>`)
+      .map((i) => `<li><b>${explain(plainTitle(i.title))}</b>：${explain(i.todo || i.question || i.reason)} <span class="rid">${esc(i.rowId)}</span></li>`)
       .join("")}</ul>
       <div class="handoff"><b>この続きは、Claudeに頼めます。</b>判定の結果と段取りをまとめた相談文を作ります。英語ラベルの案づくりや、輸入者へのメールの下書きも、そこから頼めます。
         <div><button class="primary" id="handoff">相談文をコピーして、Claudeを開く</button> <span id="handoffMsg" class="hint"></span></div></div></details>`;
@@ -341,6 +350,9 @@ function handoffText(c) {
   return out.join("\n").replace(/\n{3,}/g, "\n\n");
 }
 
+const ORDER_LV = { 出せない: 0, 直せば出せる: 1, 確認が必要: 2, 輸出用に足す: 3 };
+const isAfterStopItem = (i) => /止められた後|不合格になった後/.test(i.title || "");
+
 // 用語の言い換え。画面の文に出てきたら、点線の下線とマウスを乗せたときの説明をつける
 const GLOSSARY = {
   "FCE": "米国FDAへの、缶詰・レトルト食品の工場の登録",
@@ -352,6 +364,9 @@ const GLOSSARY = {
   "UFI": "施設ごとの番号。米国では DUNS番号（会社・工場の番号）を使う",
   "DUNS": "会社・工場ごとの番号（無料で取れる）",
   "Prior Notice": "米国に荷物を送る前の、FDAへの事前の知らせ（出荷ごと）",
+  "US Agent": "米国内の代理人。FDAとの連絡窓口になる人や会社。輸入者や代行サービスに頼める",
+  "FURLS": "FDAの登録をするウェブの窓口",
+  "ISF": "船で米国に送るとき、積む前に出す輸入者の申告",
   "FSVP": "米国の輸入者が、輸入する食品の安全を確かめる決まり",
   "第三国リスト": "EUが、この国のこの原料なら入れてよいと認めた国の一覧",
   "混合食品": "植物の原料と、加工した動物の原料（魚・肉・乳・卵など）を合わせた食品",
