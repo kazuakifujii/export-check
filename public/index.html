@@ -28,26 +28,25 @@
         <p>ラベルの写真をここに置くか、<button class="link" id="pick">写真を選ぶ</button></p>
         <img id="preview" alt="" hidden>
       </div>
-      <details>
-        <summary>写真の代わりに、ラベルの文字を貼る</summary>
-        <textarea id="labelText" rows="8" placeholder="名称：…&#10;原材料名：…"></textarea>
-      </details>
+      <textarea id="labelText" hidden></textarea>
       <button class="ghost" id="sample">見本の商品を入れる（架空の「とうもろこしごはんの素」）</button>
     </div>
 
     <div class="panel">
-      <h2><span class="step">2</span>出したい国を選ぶ</h2>
-      <div class="countries">
-        <label><input type="radio" name="country" value="US" checked> 米国</label>
-        <label><input type="radio" name="country" value="EU"> EU</label>
-        <label><input type="radio" name="country" value="CN"> 中国</label>
-      </div>
-      <p class="hint">まず1つの国で調べます。ほかの国は、結果の画面の「次の輸出先でチェックする」から続けて調べられます。ほかに入れるものはありません。判定に足りない事実があれば、結果の画面で、理由と一緒に聞き返します。</p>
+      <h2><span class="step">2</span>出したい国でチェックする</h2>
+      <label class="concern">ほかに気になること（あれば）
+        <textarea id="concern" rows="3" placeholder="例：英語ラベルは商社の倉庫で貼る予定／原料のかつお節は鹿児島の工場から仕入れている／EUの小売店に置きたい"></textarea>
+      </label>
+      <p class="hint">国ごとに調べます。1つ調べたあと、ほかの国のボタンを押すと続けて調べられ、結果はタブで見比べられます。判定に足りない事実があれば、結果の画面で、理由と一緒に聞き返します。</p>
       <details class="settings"><summary>詳しい設定</summary>
         <div class="asof"><label>判定日 <input type="date" id="asOf"></label>
         <span class="hint">この日に施行されている決まりで判定します（施行前の決まりは「これから変わる」と出します）。</span></div>
       </details>
-      <button class="primary" id="run">チェックする</button>
+      <div class="runs">
+        <button class="primary runc" data-c="US">米国でチェックする</button>
+        <button class="primary runc" data-c="EU">EUでチェックする</button>
+        <button class="primary runc" data-c="CN">中国でチェックする</button>
+      </div>
       <p class="status" id="status"></p>
     </div>
   </div>

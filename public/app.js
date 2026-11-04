@@ -33,6 +33,7 @@ function setImage(file) {
     $("#preview").src = reader.result;
     $("#preview").hidden = false;
     $("#labelText").value = "";
+    state.labelDirty = true;
   };
   reader.readAsDataURL(file);
 }
@@ -41,11 +42,13 @@ $("#sample").addEventListener("click", () => {
   state.image = null;
   $("#preview").hidden = true;
   $("#labelText").value = window.SAMPLES.corn.text;
-  $("#labelText").closest("details").open = true;
+  state.labelDirty = true;
+  setStatus("見本の商品（架空の「とうもろこしごはんの素」）を入れました。調べたい国のボタンを押してください。");
 });
 
 function collectAnswers() {
-  return { ...state.extraAnswers };
+  const concern = $("#concern").value.trim();
+  return { ...state.extraAnswers, ...(concern ? { ほかに気になること: concern } : {}) };
 }
 
 async function post(url, body) {
@@ -55,28 +58,26 @@ async function post(url, body) {
   return j;
 }
 
-$("#run").addEventListener("click", () => {
-  const picked = document.querySelector("input[name=country]:checked");
-  if (!picked) return setStatus("輸出先を1つ選んでください");
-  run(true, picked.value);
-});
+document.querySelectorAll(".runc").forEach((b) => b.addEventListener("click", () => run(!!state.labelDirty, b.dataset.c)));
 
 const COUNTRY_NAMES = { US: "米国", EU: "EU", CN: "中国" };
 
 // 1つの国だけをチェックする。前にチェックした国の結果は残し、タブで見比べられる
 async function run(reread, country) {
-  const btn = $("#run");
-  btn.disabled = true;
+  const btns = [...document.querySelectorAll(".runc, .nextc")];
+  btns.forEach((b) => (b.disabled = true));
   try {
     if (reread || !state.label) {
-      if (!state.image && !$("#labelText").value.trim()) throw new Error("ラベルの写真か文字を入れてください");
+      if (!state.image && !$("#labelText").value.trim()) throw new Error("ラベルの写真を入れてください");
       setStatus("ラベルを読んでいます…");
       state.label = await post("/api/read", state.image ? { image: state.image, mediaType: state.mediaType } : { text: $("#labelText").value });
+      state.labelDirty = false;
       state.result = null; // 新しいラベルなので、前の結果は消す
       renderLabel();
       $("#result").hidden = false;
     }
     setStatus(`${COUNTRY_NAMES[country]}の決まりノートを1行ずつ当てはめています… 1分ほどかかります`);
+    state.lastConcern = $("#concern").value.trim();
     const r = await post("/api/check", { label: state.label, countries: [country], answers: collectAnswers(), asOf: $("#asOf").value });
     state.result = { ...r, countries: { ...(state.result?.countries || {}), ...r.countries } };
     state.country = country;
@@ -87,7 +88,7 @@ async function run(reread, country) {
   } catch (e) {
     setStatus("うまくいきませんでした：" + e.message);
   } finally {
-    btn.disabled = false;
+    document.querySelectorAll(".runc, .nextc").forEach((b) => (b.disabled = false));
   }
 }
 
@@ -227,6 +228,11 @@ function renderCountry(c) {
   }
   html += `</div></section>`;
 
+  const concern = state.lastConcern;
+  if (concern) {
+    html += `<section class="questions"><h3>書いてもらった「気になること」</h3><p>${esc(concern)}</p>
+      <p class="hint">決まりノートの行に関係する所は、その行の判定の理由に書いています。ノートに無いことは判定できないので、窓口（JETRO など）で確かめてください。</p></section>`;
+  }
   // 当てはまらない決まりは、全部見た証拠として一番下に畳んで置く
   const naAll = c.items.filter((i) => i.level === "対象外");
   if (naAll.length && !f) {

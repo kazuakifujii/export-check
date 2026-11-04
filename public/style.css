@@ -129,3 +129,7 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
   .concept { grid-template-columns: 1fr; } .carrow { transform: rotate(90deg); text-align: center; }
 }
 .naall { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 10px; }
+.runs { display: flex; flex-wrap: wrap; gap: 8px; } .runs .primary { margin-top: 6px; }
+.runs .primary:disabled { cursor: wait; }
+.concern { display: grid; gap: 4px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+#sample { margin-top: 12px; }
