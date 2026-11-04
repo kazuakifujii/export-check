@@ -277,3 +277,32 @@ function usCannedClassCore(label, answers = {}) {
   }
   return { ...base, cls: "分からない", sure: false, needSealedQuestion: true, why: "密封して加熱殺菌しているかと、pH・水分活性で決まります。" };
 }
+
+// EUの見せ場：動物由来の原料（決まりノート EU-X1・EU-F1）。割合による免除は無い
+const EU_ANIMAL = [
+  [/宗田かつお節|宗田節/, "宗田かつお節"], [/かつお節|鰹節|かつおぶし|かれぶし|削りぶし/, "かつお節"], [/煮干|にぼし/, "煮干し"],
+  [/(かつお|鰹|魚介|ほたて|えび|かに|いか|さば|いわし)(エキス|だし)/, "魚介のエキス・だし"], [/(チキン|ポーク|ビーフ|牛|豚|鶏|肉)エキス/, "肉のエキス"],
+  [/乳製品|脱脂粉乳|全粉乳|バター|チーズ|生クリーム|乳糖|ホエイ|乳たんぱく/, "乳製品"], [/卵黄|卵白|全卵|鶏卵|(?<!乳化)卵(?!殻)/, "卵"],
+  [/はちみつ|蜂蜜/, "はちみつ"], [/ゼラチン/, "ゼラチン"], [/魚醤/, "魚醤"],
+];
+export function euAnimalBand(label) {
+  const ing = fieldValue(label, "原材料名") || label.fullText || "";
+  const found = [];
+  for (const [re, nm] of EU_ANIMAL) if (re.test(ing) && !found.includes(nm)) found.push(nm);
+  if (found.includes("宗田かつお節") && found.includes("かつお節") && !/(?<!宗田)かつお節/.test(ing.replace(/宗田かつお節/g, ""))) found.splice(found.indexOf("かつお節"), 1);
+  return { found };
+}
+
+// 中国の見せ場：最後に加工した工場と主な原料の産地（決まりノート 0-1・0-7・0-9）
+export function cnOriginBand(label, answers = {}) {
+  const maker = label.fields.filter((f) => /製造者|製造所|加工者|販売者/.test(f.name)).map((f) => f.value).join(" ");
+  const makerPrefs = prefecturesInText(maker);
+  const ans = answers["主な原料の産地"] || answers["産地"] || "";
+  const ansStopped = CN_STOPPED_PREFECTURES.filter((p) => ans.includes(p));
+  const codeOnly = !makerPrefs.length && /[+＋][A-Za-z0-9０-９Ａ-Ｚ]{1,10}/.test(label.fullText || "");
+  const stopped = [...makerPrefs.filter(isStopped), ...ansStopped];
+  if (stopped.length) return { state: "止まる", prefs: stopped, why: `${stopped.join("・")}は、中国が食品の輸入を止めている10都県です。` };
+  if (makerPrefs.length && ans) return { state: "10都県の外", prefs: makerPrefs, why: `工場は${makerPrefs.join("・")}、主な原料は「${ans}」で、どちらも10都県ではありません。` };
+  if (makerPrefs.length) return { state: "原料を聞く", prefs: makerPrefs, why: `ラベルの住所は${makerPrefs.join("・")}で、10都県ではありません。最後に加工した工場がここか、主な原料の産地も確かめます。` };
+  return { state: codeOnly ? "固有記号" : "分からない", prefs: [], why: codeOnly ? "製造所固有記号しか書いていないので、工場の県が分かりません。消費者庁のデータベースで調べるか、販売者に聞いてください。" : "工場と主な原料の都道府県が分かると決まります。" };
+}

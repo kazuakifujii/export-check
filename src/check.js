@@ -7,7 +7,7 @@
 
 import { askJson } from "./claude.js";
 import { loadNote, rowsForCountry, rowToText, COUNTRIES } from "./note.js";
-import { PROGRAM_RULES, usCannedClass } from "./rules.js";
+import { PROGRAM_RULES, usCannedClass, euAnimalBand, cnOriginBand } from "./rules.js";
 import { verifyJudgement } from "./verify.js";
 
 export const STATUSES = ["ある", "無い", "対象外", "分からない"];
@@ -205,6 +205,8 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
       summary: summarize(items),
       tomorrow: tomorrowList(items),
       usClass: c === "US" ? usCannedClass(label, answers) : null,
+      euAnimal: c === "EU" ? euAnimalBand(label) : null,
+      cnOrigin: c === "CN" ? cnOriginBand(label, answers) : null,
       verdict: verdictOf(items, c === "US" ? usCannedClass(label, answers) : null),
       ifStopped: ifStoppedList(items),
       checkedRows: items.length,

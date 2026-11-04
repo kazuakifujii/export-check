@@ -604,6 +604,31 @@ function usClassBand(c) {
   </div>`;
 }
 
+// EUの見せ場：動物由来の原料は、EUのリストに載った施設の物しか使えない（量が少なくても同じ）
+function euBand(c) {
+  const e = c.euAnimal;
+  if (!e) return "";
+  if (!e.found.length) return `<div class="outlook usclass ol-go"><span class="tier">EU：動物由来の原料</span><p class="ol-main">ラベルからは、動物由来の原料は見つかっていません。</p><p class="hint">エキスや調味料の中身に入っていることがあるので、仕入先に確かめてください。</p></div>`;
+  const row = c.items.find((i) => i.rowId === "EU-X1");
+  const ways = shortWays(row?.workaround);
+  return `<div class="outlook usclass ol-way"><span class="tier">EU：動物由来の原料</span>
+    <p class="ol-main">動物由来の原料（${esc(e.found.join("、"))}）は、EUのリストに載った施設で作った物しか使えません。</p>
+    <p>量が少なくても同じです（割合による免除はありません）。</p>
+    <p><b>仕入先に聞くこと：</b>「この原料は、EUのリストに載った施設で作っていますか」</p>
+    ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}</div>`;
+}
+// 中国の見せ場：最後に加工した工場と主な原料が、輸入を止めている10都県か
+function cnBand(c) {
+  const o = c.cnOrigin;
+  if (!o) return "";
+  const tone = { 止まる: "ol-stop", "10都県の外": "ol-go" }[o.state] || "ol-hard";
+  const head = { 止まる: "中国へは、この産地のままでは出せません。", "10都県の外": "産地では止まりません。", 原料を聞く: "工場の県は10都県の外です。主な原料の産地を確かめます。", 固有記号: "工場の県が分かりません。", 分からない: "産地で止まるかは、まだ決まっていません。" }[o.state];
+  const ask = !["止まる", "10都県の外"].includes(o.state);
+  return `<div class="outlook usclass ${tone}"><span class="tier">中国：工場と原料の産地</span><p class="ol-main">${esc(head)}</p><p>${explain(o.why)}</p>
+    <p class="hint">中国は、福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野の食品を止めています。工場が登録済みでも、最後に加工した所か主な原料がここなら止まります。</p>
+    ${ask ? `<div class="usask"><div class="qin"><label class="qf"><span>最後に加工した工場と、主な原料の都道府県</span><input data-q="主な原料の産地" placeholder="例：工場は静岡県、原料も静岡県" value="${esc(state.extraAnswers["主な原料の産地"] || "")}"></label></div><button class="primary rerun2">入れて、もう一度チェック</button></div>` : ""}</div>`;
+}
+
 // 一番上の「見立てと次の一歩」（議論の結論 11/4：主役は輸出の可能性と次の一歩。確率は出さない）
 // 回避策の短い形：①②③ごとに「一言」と【残る：〜】。かっこの中（くわしい説明）は開いたら見える
 function shortWays(w) {
@@ -639,7 +664,7 @@ function outlook(c) {
       ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
       <details class="more"><summary>くわしく</summary>${x.reason ? `<p>${explain(x.reason)}</p>` : ""}${x.workaround ? `<p>${explain(x.workaround)}</p>` : ""}</details></li>`;
   };
-  return usClassBand(c) + `<div class="outlook ${MSG[0]}"><span class="tier">${esc(v.tier)}</span>
+  return usClassBand(c) + euBand(c) + cnBand(c) + `<div class="outlook ${MSG[0]}"><span class="tier">${esc(v.tier)}</span>
     <p class="ol-main">${MSG[1]}</p>${MSG[2] ? `<p>${MSG[2]}</p>` : ""}
     ${v.items.length ? `<ul class="ol-list">${v.items.map(li).join("")}</ul>` : ""}
     ${v.tier === "進められる見込み" && beyond.length ? `<p class="beyond"><b>ただし、ラベル以外にも残っています：</b>${beyond.map((i) => explain(plainTitle(i.title))).join("、")}${beyondMore}</p>` : ""}
