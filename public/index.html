@@ -36,22 +36,17 @@
     </div>
 
     <div class="panel">
-      <h2><span class="step">2</span>国と、分かっていること</h2>
+      <h2><span class="step">2</span>出したい国を選ぶ</h2>
       <div class="countries">
         <label><input type="checkbox" name="country" value="US" checked> 米国</label>
         <label><input type="checkbox" name="country" value="EU" checked> EU</label>
         <label><input type="checkbox" name="country" value="CN" checked> 中国</label>
       </div>
-      <p class="hint">分からない所は空のままで大丈夫です。必要なときだけ、あとで聞き返します。</p>
-      <div class="answers" id="answers">
-        <label>作る場所<select data-key="作る場所"><option value=""></option><option>自社工場</option><option>委託先の工場</option></select></label>
-        <label>保存<select data-key="保存"><option value=""></option><option>常温</option><option>冷蔵</option><option>冷凍</option></select></label>
-        <label>主な原料の産地（都道府県）<input data-key="主な原料の産地" placeholder="例：北海道"></label>
-        <label>英語ラベルを貼る場所<input data-key="英語ラベルを貼る場所" placeholder="例：商社の倉庫（日本）"></label>
-        <label>pH<input data-key="pH" inputmode="decimal" placeholder="例：5.8"></label>
-        <label>水分活性（Aw）<input data-key="Aw" inputmode="decimal" placeholder="例：0.97"></label>
-      </div>
-      <div class="asof"><label>判定日 <input type="date" id="asOf"></label></div>
+      <p class="hint">ほかに入れるものはありません。判定に足りない事実があれば、結果の画面で、理由と一緒に聞き返します。</p>
+      <details class="settings"><summary>詳しい設定</summary>
+        <div class="asof"><label>判定日 <input type="date" id="asOf"></label>
+        <span class="hint">この日に施行されている決まりで判定します（施行前の決まりは「これから変わる」と出します）。</span></div>
+      </details>
       <button class="primary" id="run">チェックする</button>
       <p class="status" id="status"></p>
     </div>

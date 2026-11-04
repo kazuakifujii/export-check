@@ -11,7 +11,7 @@ import { PROGRAM_RULES } from "./rules.js";
 import { verifyJudgement } from "./verify.js";
 
 export const STATUSES = ["ある", "無い", "対象外", "分からない"];
-export const TODO_KINDS = ["輸入者に聞く", "日本で取る書類", "出荷ごと", "ラベル・商品を直す", "なし"];
+export const TODO_KINDS = ["輸入者に聞く", "日本で取る書類", "出荷ごと", "輸出用の表示で足す", "今の表示・原料を直す", "なし"];
 
 const JUDGE_SCHEMA = {
   type: "object",
@@ -59,7 +59,10 @@ const SYSTEM = `あなたは、日本の食品を海外に輸出するときの�
 - 工場の登録や輸入者の手続きなど、ラベルからは分からない行は、答えに書かれていなければ「分からない」です。推測で「ある」にしません。
 - 原材料に書いてある物だけでなく、「欄ごと無い項目」（英語の表示、栄養成分表示、輸入者の住所など）も探します。
 - label_quote はラベルの文字を一続きにそのまま写します。note_quote は決まりノートのその行の文を一続きにそのまま写します。どちらも言い換え・省略記号は禁止です。
-- todo_kind は、次にやることが誰の・いつの仕事かで選びます。輸入者に確かめること＝輸入者に聞く、日本の工場や役所で取る登録・証明書＝日本で取る書類、荷物ごとの通知や申告＝出荷ごと、表示や原料の作り直し＝ラベル・商品を直す、何もしなくてよい＝なし。
+- todo_kind は、次にやることが誰の・いつの仕事かで選びます。輸入者に確かめること＝輸入者に聞く、日本の工場や役所で取る登録・証明書＝日本で取る書類、荷物ごとの通知や申告＝出荷ごと、何もしなくてよい＝なし。
+- 表示の行で「無い」のときは、次の2つを分けます。
+  ・輸出用の表示で足す：輸出するときに新しく作る表示（英語や現地語のラベル、オンス併記、米国様式の栄養成分表示、Product of Japan、輸入者の住所、包装の登録番号など）。日本のラベルに無いのは当たり前で、輸出用のラベルを作るときに入れればよいもの。
+  ・今の表示・原料を直す：日本のラベルの中身そのもの（原材料の書き方、アレルゲンの抜け、使えない添加物・原料、魚種が決まらない書き方など）を変えないと、輸出用のラベルも正しく作れないもの。
 - 表示の「言語」（英語・販売国の言語・中国語で書いてあるか）は、言語そのものを決めた行（米国 US-P7、EU EU-P1、中国 CN-P1 など）だけで判定します。それ以外の表示の行（アレルゲン、魚種名、原材料の書き方など）は、書くべき中身がラベルにあるか（日本語でもよい）で判定し、「英語で書いていない」ことを理由に「無い」にはしません。
 - 政治的な言い方はしません。公表された決まりの文だけを根拠にします。`;
 
@@ -145,13 +148,15 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
         status = "分からない";
       }
       const upcoming = row.dates.filter((d) => d.date > asOf);
+      const addOn = status === "無い" && j.todo_kind === "輸出用の表示で足す";
       return {
         rowId: row.id,
         box: row.box,
         title: row.title,
         claudeStatus: j.status,
         status,
-        level: levelOf(status, row),
+        level: addOn ? "輸出用に足す" : levelOf(status, row),
+        addOn,
         downgraded: problems.length > 0,
         flags,
         reason: j.reason || "",
@@ -189,7 +194,7 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
 }
 
 function summarize(items) {
-  const s = { 出せない: 0, 直せば出せる: 0, 確認が必要: 0, 問題なし: 0, 対象外: 0 };
+  const s = { 出せない: 0, 直せば出せる: 0, 確認が必要: 0, 輸出用に足す: 0, 問題なし: 0, 対象外: 0 };
   for (const i of items) s[i.level] = (s[i.level] || 0) + 1;
   return s;
 }

@@ -45,11 +45,7 @@ $("#sample").addEventListener("click", () => {
 });
 
 function collectAnswers() {
-  const a = {};
-  document.querySelectorAll("#answers [data-key]").forEach((el) => {
-    if (el.value.trim()) a[el.dataset.key] = el.value.trim();
-  });
-  return { ...a, ...state.extraAnswers };
+  return { ...state.extraAnswers };
 }
 
 async function post(url, body) {
@@ -101,14 +97,25 @@ function highlight(quote) {
 }
 
 // ---------- 結果 ----------
-const LEVEL_CLASS = { 出せない: "lv-stop", 直せば出せる: "lv-fix", 確認が必要: "lv-ask", 問題なし: "lv-ok", 対象外: "lv-na" };
+const LEVEL_CLASS = { 出せない: "lv-stop", 直せば出せる: "lv-fix", 確認が必要: "lv-ask", 輸出用に足す: "lv-add", 問題なし: "lv-ok", 対象外: "lv-na" };
 const BOX_ORDER = [
-  ["入口", "入口（最初に見る）", "そもそも、この産地・品目は出してよいか"],
-  ["施設", "施設の箱", "どこで作り、扱うか"],
-  ["交差", "交差するところ", "この商品を、この工場で。間に落ちやすい"],
-  ["製品", "製品の箱", "何を、どう表示するか"],
+  ["入口", "そもそも、この国に出せるか", "産地や品目で、国として受け入れを止めているもの"],
+  ["施設", "工場・倉庫でする手続き", "どこで作り、どこで保管・ラベル貼りをするか（登録など）"],
+  ["交差", "この商品を、この工場で作るときの決まり", "商品の中身と作り方の組み合わせで決まるもの。表示の担当と工場の担当の間に落ちやすい所"],
+  ["製品", "ラベルと原料", "何を使い、どう書くか"],
 ];
 
+// 聞き返しのうち、決まった形で答えてもらう項目（理由も一緒に見せる）
+const QUESTION_FIELDS = {
+  "0-1": [{ key: "主な原料の産地", label: "工場と主な原料の都道府県", placeholder: "例：工場は北海道、原料も北海道", why: "中国は、日本の10都県（福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野）の食品の輸入を止めています。この10都県に入るかを確かめるためだけに使います。" }],
+  "US-X1": [
+    { key: "pH", label: "最終製品の pH", placeholder: "例：5.8", why: "米国では、pH 4.6 を超え、かつ水分活性 0.85 を超える常温の密封・加熱殺菌品は「低酸性缶詰食品」になり、工場の登録と殺菌工程の届け出が要ります。2つそろって判定できます。" },
+    { key: "Aw", label: "水分活性（Aw）", placeholder: "例：0.97" },
+  ],
+  "US-X2": [{ key: "pH", label: "最終製品の pH", placeholder: "例：4.2" }],
+  "US-X3": [{ key: "保存", label: "工場から店までの温度", select: ["ずっと冷蔵", "途中で常温に置く時間がある", "常温"], why: "冷蔵で流通する食品は、米国の低酸性缶詰食品の決まりから外れます。ただし、表示ではなく実際にずっと冷蔵かで決まります。" }],
+  "US-X5": [{ key: "英語ラベルを貼る場所", label: "英語ラベルを貼る場所", placeholder: "例：商社の倉庫（日本）", why: "ラベル貼りだけをする倉庫も、米国の施設登録が要るからです。" }],
+};
 function renderResult() {
   const r = state.result;
   const cs = Object.keys(r.countries);
@@ -129,6 +136,7 @@ function renderCountry(c) {
     <span class="chip lv-stop">出せない ${s["出せない"]}</span>
     <span class="chip lv-fix">直せば出せる ${s["直せば出せる"]}</span>
     <span class="chip lv-ask">確認が必要 ${s["確認が必要"]}</span>
+    <span class="chip lv-add">輸出用に足す ${s["輸出用に足す"]}</span>
     <span class="chip lv-ok">問題なし ${s["問題なし"]}</span>
     <span class="chip lv-na">対象外 ${s["対象外"]}</span>
     <span class="count">決まりノート ${c.noteRows}行のうち ${c.checkedRows}行を判定（判定日 ${esc(state.result.asOf)}）</span>
@@ -144,22 +152,39 @@ function renderCountry(c) {
     const items = c.items.filter((i) => i.box === key);
     if (!items.length) continue;
     const order = ["出せない", "直せば出せる", "確認が必要", "問題なし"];
-    const shown = items.filter((i) => i.level !== "対象外").sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
+    const shown = items.filter((i) => order.includes(i.level)).sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
+    const add = items.filter((i) => i.level === "輸出用に足す");
     const na = items.filter((i) => i.level === "対象外");
     html += `<section class="box box-${key}">
       <h3>${name}<small>${sub}</small></h3>
-      ${shown.map(card).join("") || `<p class="hint">引っかかる行はありません</p>`}
-      ${na.length ? `<details class="na"><summary>対象外 ${na.length}行</summary>${na.map(card).join("")}</details>` : ""}
+      ${shown.map(card).join("") || `<p class="hint">引っかかる所はありません</p>`}
+      ${add.length ? `<details class="addon"><summary>＋α 輸出用のラベルを作るときに足すもの（${add.length}）</summary>
+        <p class="hint">日本のラベルに無いのは当たり前のものです。輸出用のラベルを作るときに入れてください。</p>${add.map(card).join("")}</details>` : ""}
+      ${na.length ? `<details class="na"><summary>この商品には当てはまらない決まり（${na.length}）</summary>${na.map(card).join("")}</details>` : ""}
     </section>`;
   }
   html += `</div>`;
 
   const qs = c.items.filter((i) => i.status === "分からない" && i.question);
   if (qs.length) {
+    const usedKeys = new Set();
+    const rowsHtml = qs.map((i) => {
+      const fields = (QUESTION_FIELDS[i.rowId] || []).filter((f) => !usedKeys.has(f.key));
+      fields.forEach((f) => usedKeys.add(f.key));
+      if (QUESTION_FIELDS[i.rowId] && fields.length === 0) return "";
+      const inputs = fields.length
+        ? fields.map((f) => `<label class="qf"><span>${esc(f.label)}</span>${
+            f.select
+              ? `<select data-q="${esc(f.key)}"><option value=""></option>${f.select.map((o) => `<option ${state.extraAnswers[f.key] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
+              : `<input data-q="${esc(f.key)}" placeholder="${esc(f.placeholder || "")}" value="${esc(state.extraAnswers[f.key] || "")}">`
+          }</label>`).join("")
+        : `<input data-q="${esc(i.rowId)}の答え" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
+      const why = fields.map((f) => f.why).filter(Boolean).join(" ");
+      return `<div class="q"><div><b>${esc(i.rowId)}</b> ${esc(i.question)}${why ? `<div class="why">なぜ聞くか：${esc(why)}</div>` : ""}</div><div class="qin">${inputs}</div></div>`;
+    }).join("");
     html += `<section class="questions"><h3>分かれば決まること（${qs.length}）</h3>
-      <p class="hint">分かる所だけ答えて、もう一度チェックできます。</p>
-      ${qs.map((i) => `<label class="q"><span><b>${esc(i.rowId)}</b> ${esc(i.question)}</span>
-        <input data-q="${esc(i.rowId)}の答え" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}"></label>`).join("")}
+      <p class="hint">分かる所だけ答えて、もう一度チェックできます。分からない所は空のままで大丈夫です。</p>
+      ${rowsHtml}
       <button class="primary" id="rerun">答えて、もう一度チェック</button></section>`;
   }
 

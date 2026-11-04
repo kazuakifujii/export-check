@@ -58,7 +58,7 @@ test("総当たり：答えが返らなかった行も、根拠の合わない�
       .filter((r) => r.id === "US-P1" || r.id === "US-P4")
       .map((r) =>
         r.id === "US-P1"
-          ? { row_id: r.id, status: "無い", reason: "ごまの表示が無い", label_quote: "ごま油", absent_on_label: false, answer_keys: [], note_quote: "主要アレルゲン9品目の表示", question: "", todo_kind: "ラベル・商品を直す", todo: "英語表示に sesame を足す" }
+          ? { row_id: r.id, status: "無い", reason: "ごまの表示が無い", label_quote: "ごま油", absent_on_label: false, answer_keys: [], note_quote: "主要アレルゲン9品目の表示", question: "", todo_kind: "今の表示・原料を直す", todo: "英語表示に sesame を足す" }
           : { row_id: r.id, status: "ある", reason: "うそ", label_quote: "グルタミン酸ナトリウム", absent_on_label: false, answer_keys: [], note_quote: "存在しない文", question: "", todo_kind: "なし", todo: "" },
       ),
   });
