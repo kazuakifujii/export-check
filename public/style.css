@@ -157,3 +157,13 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
   body > *:not(.onepager) { display: none !important; }
   .onepager { position: static; padding: 0; } .no-print { display: none !important; }
 }
+
+.viewsw { display: flex; gap: 6px; margin-bottom: 10px; } .viewsw .on { background: var(--ink); color: #fff; }
+.annot { display: grid; gap: 4px; }
+.al-row { display: grid; grid-template-columns: minmax(200px, 38%) 24px 1fr; gap: 6px; align-items: start; }
+.al-line { border: 1px solid #333; background: #fffdf7; padding: 4px 8px; font-size: 13px; }
+.al-row.has .al-line { background: #fff3a8; }
+.al-missing .al-line { border-style: dashed; color: var(--muted); background: #fafafa !important; }
+.al-arrow { color: var(--accent); font-size: 18px; text-align: center; line-height: 1.6; }
+.callout { border-left: 4px solid var(--c); background: #fff; border-radius: 6px; padding: 4px 8px; margin-bottom: 4px; font-size: 13px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+@media (max-width: 900px) { .al-row { grid-template-columns: 1fr; } .al-arrow { display: none; } }

@@ -156,7 +156,10 @@ function renderResult() {
   $("#countryTabs").innerHTML += `<button class="ghost opbtn" id="opOpen">社長に出す1枚</button>`;
   $("#opOpen").addEventListener("click", openOnePager);
   document.querySelectorAll(".nextc").forEach((b) => b.addEventListener("click", () => run(false, b.dataset.c)));
-  renderCountry(r.countries[state.country]);
+  if (state.view === "label") renderAnnotated(r.countries[state.country]);
+  else renderCountry(r.countries[state.country]);
+  $("#countryBody").insertAdjacentHTML("afterbegin", `<div class="viewsw"><button class="ghost ${state.view !== "label" ? "on" : ""}" data-v="table">チェック表で見る</button><button class="ghost ${state.view === "label" ? "on" : ""}" data-v="label">ラベルに書き込んで見る</button></div>`);
+  document.querySelectorAll(".viewsw button").forEach((b) => b.addEventListener("click", () => { state.view = b.dataset.v; renderResult(); }));
 }
 
 function renderCountry(c) {
@@ -457,3 +460,29 @@ function openOnePager() {
 }
 $("#opClose").addEventListener("click", () => ($("#onePager").hidden = true));
 $("#opPrint").addEventListener("click", () => window.print());
+
+// ラベルに書き込んで見る：読み取ったラベルを描き直し、その行の横に指摘を付ける。
+// ラベルに書いていない項目や工場の話は、製造者の行か、下の「ラベルに無い所」に付ける。
+function renderAnnotated(c) {
+  const lines = state.label.lines;
+  const keep = (i) => ["出せない", "直せば出せる", "確認が必要", "輸出用に足す"].includes(i.level);
+  const items = c.items.filter(keep);
+  const at = lines.map(() => []);
+  const missing = [];
+  const makerLine = lines.findIndex((l) => /製造者|製造所|販売者|加工者/.test(l));
+  for (const i of items) {
+    const q = nrm(i.labelQuote);
+    let k = q ? lines.findIndex((l) => nrm(l).includes(q)) : -1;
+    if (k === -1 && (i.box === "施設" || i.box === "交差") && makerLine !== -1 && !i.absentOnLabel) k = makerLine;
+    if (k === -1) missing.push(i);
+    else at[k].push(i);
+  }
+  const call = (i) => `<div class="callout ${LEVEL_CLASS[i.level]}"><span class="badge ${LEVEL_CLASS[i.level]}">${esc(levelWord(i.level))}</span>
+    <b>${explain(plainTitle(i.title))}</b>${i.todo || i.question ? `<div class="why">${explain(i.todo || i.question)}</div>` : ""}</div>`;
+  const rows = lines.map((l, k) => `<div class="al-row ${at[k].length ? "has" : ""}"><div class="al-line">${esc(l)}</div>
+      <div class="al-arrow">${at[k].length ? "◀" : ""}</div><div class="al-calls">${at[k].map(call).join("")}</div></div>`).join("");
+  $("#countryBody").innerHTML = `<p class="hint">読み取ったラベルの行の横に、${esc(c.name)}で引っかかる所を書き込みました。くわしい理由と根拠は「チェック表で見る」で確かめられます。</p>
+    <div class="annot">${rows}
+      ${missing.length ? `<div class="al-row has al-missing"><div class="al-line">（ラベルに書いていない所・工場や手続きの話）</div><div class="al-arrow">◀</div><div class="al-calls">${missing.map(call).join("")}</div></div>` : ""}
+    </div>`;
+}
