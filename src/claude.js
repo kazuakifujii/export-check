@@ -45,15 +45,20 @@ export async function askJson({ system, content, schema, maxTokens = 32000 }) {
 
 // 手元の試験用：API の代わりに、PC にログイン済みの Claude Code（claude -p）で判定する。
 // 画像は渡せないので、文字のラベルだけ。公開する道具の本体は API を使う。
+let loggedOnce = false;
 function askJsonViaClaudeCode({ system, content, schema }) {
   const parts = Array.isArray(content) ? content : [{ type: "text", text: content }];
   if (parts.some((p) => p.type !== "text")) {
     return Promise.reject(new Error("Claude Code での判定は文字のラベルだけに対応しています"));
   }
   const prompt = parts.map((p) => p.text).join("\n\n");
-  const args = ["-p", "--output-format", "json", "--model", MODEL, "--tools", "", "--system-prompt", system, "--json-schema", JSON.stringify(schema)];
+  const args = ["-p", "--output-format", "json", "--model", MODEL, "--effort", EFFORT, "--tools", "", "--system-prompt", system, "--json-schema", JSON.stringify(schema)];
+  // API の鍵を渡すと Claude Code が鍵の残高で動くので、鍵を外してプラン（ログイン）で動かす
+  const env = { ...process.env };
+  delete env.ANTHROPIC_API_KEY;
+  delete env.ANTHROPIC_AUTH_TOKEN;
   return new Promise((resolve, reject) => {
-    const child = spawn("claude", args, { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn("claude", args, { stdio: ["pipe", "pipe", "pipe"], env });
     let out = "";
     let err = "";
     child.stdout.on("data", (d) => (out += d));
@@ -63,6 +68,10 @@ function askJsonViaClaudeCode({ system, content, schema }) {
       try {
         const r = JSON.parse(out);
         if (r.is_error || !r.structured_output) throw new Error(r.result || "Claude Code の答えが読めません");
+        if (!loggedOnce) {
+          loggedOnce = true;
+          console.log(`（Claude Code で判定中。API の鍵は渡していません。Claude Code が示した定価換算 $${(r.total_cost_usd || 0).toFixed(2)}／1回）`);
+        }
         const u = r.usage || {};
         resolve({
           data: r.structured_output,
