@@ -113,10 +113,13 @@ const LEVEL_WORD = {
   直せば出せる: "直す所があります",
   確認が必要: "確かめること",
   輸出用に足す: "輸出用ラベルで足す所",
-  問題なし: "確認した範囲では問題は見つかっていません",
+  問題なし: "今回確認できた項目では、輸出を妨げる条件は見つかっていません",
   対象外: "この商品には当てはまらない項目",
 };
 const levelWord = (l) => LEVEL_WORD[l] || l;
+// 見立ての表示の言葉（中の判定名とは分ける。議論 11/4：気持ちをくじかない言い方に）
+const TIER_WORD = { 入口で無理: "今の条件では輸出できません", 現実的に厳しい: "大きな課題があります", 回避策がある: "回避策を検討できます", 進められる見込み: "進められる見込みです" };
+const tierWord = (t) => TIER_WORD[t] || t;
 const LEVEL_CLASS = { 出せない: "lv-stop", 直せば出せる: "lv-fix", 確認が必要: "lv-ask", 輸出用に足す: "lv-add", 問題なし: "lv-ok", 対象外: "lv-na" };
 const BOX_ORDER = [
   ["入口", "そもそも、この国に出せるか", "産地や品目で、国として受け入れを止めているもの"],
@@ -127,7 +130,7 @@ const BOX_ORDER = [
 
 // 聞き返しのうち、決まった形で答えてもらう項目（理由も一緒に見せる）
 const QUESTION_FIELDS = {
-  "0-1": [{ key: "主な原料の産地", label: "工場と主な原料の都道府県", placeholder: "例：工場は北海道、原料も北海道", why: "中国は、日本の10都県（福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野）の食品の輸入を止めています。この10都県に入るかを確かめるためだけに使います。" }],
+  "0-1": [{ key: "主な原料の産地", label: "工場と主な原料の都道府県", placeholder: "例：工場は北海道、原料も北海道", why: "中国が輸入停止の対象としている日本の10都県（福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野）に該当するかを確認するためだけに使います。" }],
   "US-X1": [
     { key: "pH", label: "完成品の pH（品質管理の担当に測った値を聞いてください）", placeholder: "例：5.8", why: "米国では、pH 4.6 を超え、かつ水分活性 0.85 を超える常温の密封・加熱殺菌品は「低酸性缶詰食品」になり、工場の登録と殺菌工程の届け出が要ります。2つそろって判定できます。" },
     { key: "Aw", label: "完成品の水分活性（Aw）", placeholder: "例：0.97" },
@@ -184,14 +187,15 @@ function renderCountry(c) {
     <span class="count">決まりノート ${c.noteRows}行のうち ${c.checkedRows}行を判定（判定日 ${esc(state.result.asOf)}）</span>
   </div>
   <div class="guide">
+    <p class="hint">日本語の表示は、輸出先の言葉に翻訳するものとして判定しています。</p>
     ${s["出せない"] ? `<p><b class="g-stop">出荷できない条件があります（${s["出せない"]}）</b>　理由と、進むための条件をご確認ください。</p>` : ""}
     ${s["直せば出せる"] ? `<p><b class="g-fix">直す所があります（${s["直せば出せる"]}）</b>　表示の修正や、登録・証明書の準備です。直したあとで、もう一度確かめられます。</p>` : ""}
     ${s["確認が必要"] ? `<p><b class="g-ask">確かめること（${s["確認が必要"]}）</b>　どなたに聞けばよいかも、あわせてご案内します。</p>` : ""}
-    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが片づくまでは出荷を待ち、輸入者と確かめましょう。</p>` : `<p class="hint">決まりノートで見た範囲では、引っかかるところは見つかっていません。出荷の前に、輸入者や窓口とご確認ください。</p>`}
+    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが片づくまでは出荷を待ち、輸入者と確かめましょう。</p>` : `<p class="hint">決まりノートで確認した範囲では、問題になる条件は見つかっていません。出荷の前に、輸入者や窓口とご確認ください。</p>`}
   </div>`;
 
   if (c.stoppedAtEntry) {
-    html += `<div class="banner stop"><strong>この国への入口で、確かめる条件があります。</strong>${esc(c.stoppedAtEntry.reason)}
+    html += `<div class="banner stop"><strong>この国に輸出できるか判断するために、確認が必要な条件があります。</strong>${esc(c.stoppedAtEntry.reason)}
       <br>この産地のままでは、この国へは出荷できない条件があります。下の行は、産地を変えた場合の参考として見てください。</div>`;
   }
 
@@ -216,7 +220,7 @@ function renderCountry(c) {
       <h3>${name}<small>${sub}</small></h3>
       ${shown.map(card).join("") || emptyBox(c, key, na.length)}
       ${add.length ? `<details class="addon"><summary>＋α 輸出用ラベルで足す所（${add.length}）</summary>
-        <p class="hint">日本のラベルに無くて当然のものです。輸出用のラベルを作る際に加えてください。</p>${add.map(card).join("")}</details>` : ""}
+        <p class="hint">日本のラベルには通常書かれていない、輸出先で必要な表示です。輸出用のラベルを作る際に加えてください。</p>${add.map(card).join("")}</details>` : ""}
     </section>`;
   }
   html += `</div>`;
@@ -256,7 +260,7 @@ function renderCountry(c) {
     const decided = c.items.length - qs.length;
     const rest = qs.length - firstThree.length;
     html += `<section class="questions"><h3>まずは、ここから確かめましょう</h3>
-      <p class="progress">まず確認していただきたい${firstThree.length}件です。判定が大きく進みます。${rest > 0 ? `ほかに${rest}件あります。` : ""}</p>
+      <p class="progress">まず確認していただきたい${firstThree.length}件です。輸出の可能性を、より詳しく確認できます。${rest > 0 ? `ほかに${rest}件あります。` : ""}</p>
       <p class="hint">分かるところからご入力ください。</p>
       ${firstHtml}
       ${rest > 0 ? `<details class="qrest" ${state.qRestOpen ? "open" : ""}><summary>ほかの${rest}件を見る</summary>
@@ -346,7 +350,7 @@ function handoffText(c) {
     "## 商品のラベル（日本語）",
     ...(state.label?.lines || []),
     "",
-    `## 輸出チェックの見立て（判定日 ${state.result.asOf}）：${v.tier}`,
+    `## 輸出チェックの見立て（判定日 ${state.result.asOf}）：${tierWord(v.tier)}`,
     ...v.items.map((x) => `- ${t(x)}${x.workaround ? `（回避策：${x.workaround.replace(/【[^】]*】/g, "")}）` : ""}`),
     "",
     "## 直す所",
@@ -461,7 +465,7 @@ function conceptMap() {
     <div class="carrow">←</div>
     <div class="cbox c-施設"><b>施設の要件</b><small>作る・保管する場所の準備。要る国と要らない国がある</small>
       <ul><li>工場の登録が要る国がある（米国・中国など）</li><li>ラベルを貼るだけの倉庫も、登録が要ることがある</li><li>衛生管理の計画や、出荷ごとの届け出</li></ul></div>
-    <figcaption>チャットのAIに聞くだけだと、書いてある物しか見ず、真ん中の決まりを見落としがちです。この道具は、決まりノートの行を<strong>ひとつずつ</strong>当てはめます。</figcaption>
+    <figcaption>この道具は、ラベルに書かれていない条件も含めて、決まりをひとつずつ照合します。</figcaption>
   </figure>`;
 }
 $("#conceptHead").innerHTML = conceptMap();
@@ -563,7 +567,7 @@ function renderAnnotated() {
     const v = c.verdict || { tier: "進められる見込み" };
     const cls = { 入口で無理: "ol-stop", 現実的に厳しい: "ol-hard", 回避策がある: "ol-way", 進められる見込み: "ol-go" }[v.tier];
     const wall = (v.items || [])[0];
-    return `<div class="a3-head outlook ${cls}"><div><b>${esc(c.name)}</b> <span class="tier">${esc(v.tier)}</span></div>${wall ? `<div class="a3-wall">いちばんの壁：${explain(plainTitle(wall.title))}</div>` : ""}</div>`;
+    return `<div class="a3-head outlook ${cls}"><div><b>${esc(c.name)}</b> <span class="tier">${esc(tierWord(v.tier))}</span></div>${wall ? `<div class="a3-wall">いちばんの壁：${explain(plainTitle(wall.title))}</div>` : ""}</div>`;
   }).join("");
   const more = rest.length ? `<p class="a3-rest">ほかの国も並べる：${rest.map((c) => `<button class="ghost nextc2" data-c="${c}">${COUNTRY_NAMES[c]}でチェックする</button>`).join("")}</p>` : "";
   const photo = state.image ? `<details class="al-photo"><summary>元の写真と見比べる</summary><img src="data:${esc(state.mediaType)};base64,${state.image}" alt="ラベルの写真"></details>` : "";
@@ -619,7 +623,7 @@ function usClassBand(c) {
 function euBand(c) {
   const e = c.euAnimal;
   if (!e) return "";
-  if (!e.found.length) return `<div class="outlook usclass ol-hard"><span class="tier">EU：動物由来の原料</span><p class="ol-main">ラベルからは、動物由来の原料を拾えませんでした。</p><p>エキスや調味料の中身に入っていることがあります。「動物由来の原料は入っていますか」と、仕入先にご確認ください。</p></div>`;
+  if (!e.found.length) return `<div class="outlook usclass ol-hard"><span class="tier">EU：動物由来の原料</span><p class="ol-main">ラベルからは、動物由来の原料を確認できませんでした。</p><p>エキスや調味料の中身に入っていることがあります。「動物由来の原料は入っていますか」と、仕入先にご確認ください。</p></div>`;
   const row = c.items.find((i) => i.rowId === "EU-X1");
   const ways = shortWays(row?.workaround);
   return `<div class="outlook usclass ol-way"><span class="tier">EU：動物由来の原料</span>
@@ -639,12 +643,12 @@ function cnBand(c) {
     止まる: `${o.where === "工場" ? "工場" : "主な原料"}が${(o.prefs || []).join("・")}なので、この産地のままでは中国に出せません。`,
     "10都県の外": "産地による停止には、当たらない見込みです。",
     原料を聞く: "工場の県は10都県の外です。主な原料の産地を確かめます。",
-    固有記号: "工場の県が、ラベルからは分かりませんでした。",
+    固有記号: "製造所固有記号しか書かれておらず、工場の県が分かりませんでした。",
     分からない: "産地で止まるかどうかは、まだ分かりません。",
   }[o.state];
   const ask = !["止まる", "10都県の外"].includes(o.state);
   const after = o.state === "10都県の外" ? `<p>ただし、産地の証明書、最後に保管する場所と輸送経路、工場の登録の確認が要ります。</p>` : "";
-  const way = o.state === "止まる" ? `<div class="way"><b>回避策</b><ul><li>10都県の外の工場で作り、主な原料も10都県の外にする<div class="remain">大がかりです。工場だけでなく、原料の産地も要ります</div></li></ul></div>` : "";
+  const way = o.state === "止まる" ? `<div class="way"><b>回避策</b><ul><li>10都県の外の工場で作り、主な原料も10都県の外のものにする<div class="remain">工場だけでなく、主な原料の産地も変える大きな変更が必要です</div></li></ul></div>` : "";
   return `<div class="outlook usclass ${tone}"><span class="tier">中国：工場と原料の産地</span><p class="ol-main">${esc(head)}</p><p>${explain(o.why)}${asOf ? `（確認日 ${esc(asOf)}）` : ""}</p>${after}${way}
     <details class="more"><summary>対象の10都県を確かめる</summary><p>福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野。最後に加工した所か、主な原料（重さで一番多い原料）がここだと、工場が登録済みでも出せません。ほかの原料の産地は問われません（農林水産省の公表資料）。</p></details>
     ${ask ? `<div class="usask"><div class="qin"><label class="qf"><span>最後に加工した工場と、主な原料の都道府県</span><input data-q="主な原料の産地" placeholder="例：工場は静岡県、原料も静岡県" value="${esc(state.extraAnswers["主な原料の産地"] || "")}"></label></div><button class="primary rerun2">入れた内容で、もう一度チェックする</button></div>` : ""}</div>`;
@@ -674,10 +678,10 @@ function outlook(c) {
   const beyond = beyondAll.slice(0, 3);
   const beyondMore = beyondAll.length > 3 ? ` ほか${beyondAll.length - 3}件` : "";
   const MSG = {
-    入口で無理: ["ol-stop", `${name}へは、今の仕様のままでは輸出できません。`, "国として受け入れを止めている条件に当たります。この道具では、回避策を見つけられていません。"],
-    現実的に厳しい: ["ol-hard", `${name}へは、大きな課題があります。`, "制度の上では道がありますが、この道具では現実的な回避策を見つけられていません。"],
-    回避策がある: ["ol-way", `${name}へは、このままでは出せませんが、回避策があります。`, ""],
-    進められる見込み: ["ol-go", `${name}へは、進められる見込みです。`, ""],
+    入口で無理: ["ol-stop", `${name}へは、今の仕様のままでは輸出できません。`, "国として受け入れを止めている条件に該当します。別の方法がないか、輸入者や窓口にご相談ください。"],
+    現実的に厳しい: ["ol-hard", `${name}へは、大きな課題があります。`, "制度上の道はありますが、現実的な方法は見つかっていません。別の方法がないか、輸入者や窓口にご相談ください。"],
+    回避策がある: ["ol-way", `${name}へは、このままでは出せませんが、回避策を検討できます。`, ""],
+    進められる見込み: ["ol-go", `${name}へは、進められる見込みです。`, "確認した範囲では、大きな壁は見つかっていません。残る条件をご確認ください。"],
   }[v.tier];
   const li = (x) => {
     const ways = v.tier === "回避策がある" ? shortWays(x.workaround) : [];
@@ -685,10 +689,10 @@ function outlook(c) {
       ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
       <details class="more"><summary>くわしく</summary>${x.reason ? `<p>${explain(x.reason)}</p>` : ""}${x.workaround ? `<p>${explain(x.workaround)}</p>` : ""}</details></li>`;
   };
-  return usClassBand(c) + euBand(c) + cnBand(c) + `<div class="outlook ${MSG[0]}"><span class="tier">${esc(v.tier)}</span>
+  return usClassBand(c) + euBand(c) + cnBand(c) + `<div class="outlook ${MSG[0]}"><span class="tier">${esc(tierWord(v.tier))}</span>
     <p class="ol-main">${MSG[1]}</p>${MSG[2] ? `<p>${MSG[2]}</p>` : ""}
     ${v.items.length ? `<ul class="ol-list">${v.items.map(li).join("")}</ul>` : ""}
     ${v.tier === "進められる見込み" && beyond.length ? `<p class="beyond"><b>ただし、ラベルのほかにも確かめたいことがあります：</b>${beyond.map((i) => explain(plainTitle(i.title))).join("、")}${beyondMore}</p>` : ""}
     ${q0 ? `<p><b>最初に確かめたいこと：</b>${explain(q0.question)}（${esc(whoGroup(q0.askWho, q0.todoKind))}へ）</p>` : ""}
-    <p class="hint">輸出相談の準備にお使いください。出荷の前に、輸入者とご確認ください。</p></div>`;
+  </div>`;
 }
