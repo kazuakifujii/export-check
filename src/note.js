@@ -25,7 +25,11 @@ function countryFromHeading(text) {
 // "### 1-A 施設の箱" のような見出しから箱を決める
 // 行番号の文字（F＝施設、X＝交差、P＝製品）を見出しより優先する。
 // 調査で行が別の見出しの下に足されても、箱を取り違えないため。
+// 行番号の文字と区分を変える行（番号は答え合わせで使うので変えない）
+// EU-X4（かつお節の多環芳香族炭化水素の上限）は、原料そのものの基準なので「製品の要件」（残留農薬と同じ扱い）
+const BOX_OVERRIDE = { "EU-X4": "製品" };
 function boxFromId(id) {
+  if (BOX_OVERRIDE[id]) return BOX_OVERRIDE[id];
   const m = id.match(/^(?:US|EU|CN)-([FXP])\d+$/);
   return m ? { F: "施設", X: "交差", P: "製品" }[m[1]] : null;
 }
