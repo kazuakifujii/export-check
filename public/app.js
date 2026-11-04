@@ -112,9 +112,9 @@ const levelWord = (l) => LEVEL_WORD[l] || l;
 const LEVEL_CLASS = { 出せない: "lv-stop", 直せば出せる: "lv-fix", 確認が必要: "lv-ask", 輸出用に足す: "lv-add", 問題なし: "lv-ok", 対象外: "lv-na" };
 const BOX_ORDER = [
   ["入口", "そもそも、この国に出せるか", "産地や品目で、国として受け入れを止めているもの"],
-  ["施設", "工場・倉庫でする手続き", "どこで作り、どこで保管・ラベル貼りをするか（登録など）"],
-  ["交差", "この商品を、この工場で作るときの決まり", "商品の中身と作り方の組み合わせで決まるもの。表示の担当と工場の担当の間に落ちやすい所"],
-  ["製品", "ラベルと原料", "何を使い、どう書くか"],
+  ["製品", "製品の要件", "何を、どう表示するか"],
+  ["交差", "交差するところ", "この商品を、この工場で"],
+  ["施設", "施設の要件", "どこで作り、扱うか"],
 ];
 
 // 聞き返しのうち、決まった形で答えてもらう項目（理由も一緒に見せる）
@@ -124,7 +124,7 @@ const QUESTION_FIELDS = {
     { key: "pH", label: "完成品の pH（品質管理の担当に測った値を聞いてください）", placeholder: "例：5.8", why: "米国では、pH 4.6 を超え、かつ水分活性 0.85 を超える常温の密封・加熱殺菌品は「低酸性缶詰食品」になり、工場の登録と殺菌工程の届け出が要ります。2つそろって判定できます。" },
     { key: "Aw", label: "完成品の水分活性（Aw）", placeholder: "例：0.97" },
   ],
-  "US-X2": [{ key: "pH", label: "最終製品の pH", placeholder: "例：4.2" }],
+  "US-X2": [{ key: "pH", label: "完成品の pH", placeholder: "例：4.2" }],
   "US-X3": [{ key: "保存", label: "工場から店までの温度", select: ["ずっと冷蔵", "途中で常温に置く時間がある", "常温"], why: "冷蔵で流通する食品は、米国の低酸性缶詰食品の決まりから外れます。ただし、表示ではなく実際にずっと冷蔵かで決まります。" }],
   "US-X5": [{ key: "英語ラベルを貼る場所", label: "英語ラベルを貼る場所", placeholder: "例：商社の倉庫（日本）", why: "ラベル貼りだけをする倉庫も、米国の施設登録が要るからです。" }],
 };
@@ -167,6 +167,7 @@ function renderCountry(c) {
   if (f) {
     html += `<div class="filterbar">「${esc(levelWord(f))}」だけを表示しています（${s[f]}件） <button class="ghost" id="showAll">すべて表示に戻す</button></div>`;
   }
+  html += conceptMap();
   html += `<div class="boxes">`;
   for (const [key, name, sub] of BOX_ORDER) {
     const items = c.items.filter((i) => i.box === key);
@@ -185,7 +186,6 @@ function renderCountry(c) {
       ${shown.map(card).join("") || `<p class="hint">引っかかる所はありません</p>`}
       ${add.length ? `<details class="addon"><summary>＋α 輸出用のラベルを作るときに足すもの（${add.length}）</summary>
         <p class="hint">日本のラベルに無いのは当たり前のものです。輸出用のラベルを作るときに入れてください。</p>${add.map(card).join("")}</details>` : ""}
-      ${na.length ? `<details class="na"><summary>この商品には当てはまらない決まり（${na.length}）</summary>${na.map(card).join("")}</details>` : ""}
     </section>`;
   }
   html += `</div>`;
@@ -204,11 +204,16 @@ function renderCountry(c) {
               : `<input data-q="${esc(f.key)}" placeholder="${esc(f.placeholder || "")}" value="${esc(state.extraAnswers[f.key] || "")}">`
           }</label>`).join("")
         : `<input data-q="${esc(i.rowId)}の答え" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
-      const why = fields.map((f) => f.why).filter(Boolean).join(" ");
-      return `<div class="q"><div><b>${esc(i.rowId)}</b> ${esc(i.question)}${why ? `<div class="why">なぜ聞くか：${esc(why)}</div>` : ""}</div><div class="qin">${inputs}</div></div>`;
+      const why = fields.map((f) => f.why).filter(Boolean).join(" ") || i.questionWhy || i.reason;
+      return `<div class="q"><div>
+        <div class="q-topic">${explain(plainTitle(i.title))} <small>${esc(i.rowId)}</small></div>
+        <div class="q-ask">${explain(i.question)}</div>
+        ${why ? `<div class="why"><b>なぜ聞くか：</b>${explain(why)}</div>` : ""}
+        ${i.askWho ? `<div class="why"><b>誰に聞けば分かるか：</b>${esc(i.askWho)}</div>` : ""}
+      </div><div class="qin">${inputs}</div></div>`;
     }).join("");
-    html += `<section class="questions"><h3>分かれば決まること（${qs.length}）</h3>
-      <p class="hint">分かる所だけ答えて、もう一度チェックできます。分からない所は空のままで大丈夫です。</p>
+    html += `<section class="questions"><h3>教えてもらえれば決まること（${qs.length}）</h3>
+      <p class="hint">この商品のことで、ラベルからは読めず、判定が決まらなかった所です。分かる所だけ答えて、もう一度チェックできます。分からない所は空のままで大丈夫です（その行は「確認が必要」のまま残ります）。点線の下線の言葉は、マウスを乗せると意味が出ます。</p>
       ${rowsHtml}
       <button class="primary" id="rerun">答えて、もう一度チェック</button></section>`;
   }
@@ -222,6 +227,12 @@ function renderCountry(c) {
   }
   html += `</div></section>`;
 
+  // 当てはまらない決まりは、全部見た証拠として一番下に畳んで置く
+  const naAll = c.items.filter((i) => i.level === "対象外");
+  if (naAll.length && !f) {
+    html += `<details class="na naall"><summary>この商品に当てはまらない決まり ${naAll.length}件（開く）</summary>
+      <p class="hint">決まりノートの行は全部当てはめています。ここは、この商品には関係しないと判定した行です。</p>${naAll.map(card).join("")}</details>`;
+  }
   $("#countryBody").innerHTML = html;
   document.querySelectorAll(".card").forEach((el) => {
     el.addEventListener("mouseenter", () => highlight(el.dataset.quote));
@@ -237,6 +248,57 @@ function renderCountry(c) {
   });
 }
 
+// 用語の言い換え。画面の文に出てきたら、点線の下線とマウスを乗せたときの説明をつける
+const GLOSSARY = {
+  "FCE": "米国FDAへの、缶詰・レトルト食品の工場の登録",
+  "SID": "米国FDAへの、殺菌の条件（温度・時間）の届け出",
+  "LACF": "低酸性缶詰食品。酸っぱくなく水分の多い、密封・加熱殺菌の常温食品",
+  "低酸性缶詰食品": "酸っぱくなく水分の多い（pH 4.6超・水分活性0.85超）、密封・加熱殺菌の常温食品。米国で特別の届け出が要る",
+  "酸性化食品": "酢などを加えて酸っぱくした（pHを下げた）食品。米国で届け出が要る",
+  "HACCP": "原料から出荷までの危ない所を決めて、記録しながら管理するやり方",
+  "UFI": "施設ごとの番号。米国では DUNS番号（会社・工場の番号）を使う",
+  "DUNS": "会社・工場ごとの番号（無料で取れる）",
+  "Prior Notice": "米国に荷物を送る前の、FDAへの事前の知らせ（出荷ごと）",
+  "FSVP": "米国の輸入者が、輸入する食品の安全を確かめる決まり",
+  "第三国リスト": "EUが、この国のこの原料なら入れてよいと認めた国の一覧",
+  "混合食品": "植物の原料と、加工した動物の原料（魚・肉・乳・卵など）を合わせた食品",
+  "水分活性": "食品の中の、微生物が使える水の量の目安（0〜1）。高いほど傷みやすい",
+  "Aw": "水分活性。食品の中の、微生物が使える水の量の目安（0〜1）",
+  "pH": "酸っぱさの目安。小さいほど酸っぱい（4.6以下だと菌が増えにくい）",
+  "プロセスオーソリティ": "殺菌の条件が十分かを決める専門家・機関",
+  "輸入警告": "米国FDAが、検査なしで止めてよいと決めた商品・会社の一覧",
+  "Contains": "米国の英語ラベルで、アレルゲンをまとめて書く「含む：〜」の文",
+  "登録番号": "中国の税関に登録した工場の番号。包装に書く",
+};
+const GLOSS_RE = new RegExp(Object.keys(GLOSSARY).sort((a, b) => b.length - a.length).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
+function explain(text) {
+  const seen = new Set();
+  return esc(text || "").replace(GLOSS_RE, (m) => {
+    if (seen.has(m)) return m;
+    seen.add(m);
+    return `<abbr class="gl" title="${esc(GLOSSARY[m])}">${m}</abbr>`;
+  });
+}
+// 行の題から、英語の略語や条文番号のかっこを外して読みやすくする
+function plainTitle(t) {
+  return String(t || "").replace(/\*\*/g, "").replace(/（[A-Za-z0-9 .\-=／/]+）/g, "").trim();
+}
+
+// 3つの要件の概念図（例つき）。結果の上に出して、各行がどこに入るかを分かるようにする
+function conceptMap() {
+  return `<figure class="concept">
+    <div class="cbox c-製品"><b>製品の要件</b><small>何を、どう表示するか</small>
+      <ul><li>アレルゲン（魚種、ごま）</li><li>着色料</li><li>栄養成分の様式</li><li>オンスの併記</li></ul></div>
+    <div class="carrow">→</div>
+    <div class="cbox c-交差"><b>交差するところ</b><small>この商品を、この工場で</small>
+      <ul><li>米国：低酸性食品<br>→ 工程の届け出<br>→ 講習済みの責任者</li><li>EU：鰹節の出どころ<br>→ 認定施設のものか</li></ul></div>
+    <div class="carrow">←</div>
+    <div class="cbox c-施設"><b>施設の要件</b><small>どこで作り、扱うか</small>
+      <ul><li>食品施設の登録</li><li>ラベル貼りや倉庫も</li><li>米国内の代理人</li><li>衛生管理の計画</li></ul></div>
+    <figcaption>決まりは、この3つのどれかに入ります。いちばん見落としやすいのは真ん中の「交差するところ」。商品の中身と、作る工場の組み合わせで初めて決まるので、表示の担当にも工場の担当にも見えにくい所です。</figcaption>
+  </figure>`;
+}
+
 function card(i) {
   const up = i.upcoming.map((d) => `<span class="tag up">${esc(d.label)} ${esc(d.date)}</span>`).join("");
   const weak = i.weakSource ? `<span class="tag weak" title="${esc(i.marks.join(" "))}">根拠の条文・当局資料は未確認</span>` : "";
@@ -247,7 +309,7 @@ function card(i) {
   const nq = i.noteQuote ? `<div class="q-note">ノート：「${esc(i.noteQuote)}」</div>` : "";
   const link = i.urls[0] ? `<a href="${esc(i.urls[0])}" target="_blank" rel="noopener">出典</a>` : "";
   return `<article class="card ${LEVEL_CLASS[i.level]}" data-quote="${esc(i.labelQuote)}">
-    <header><span class="badge ${LEVEL_CLASS[i.level]}">${esc(levelWord(i.level))}</span><b>${esc(i.rowId)}</b> ${esc(i.title)}</header>
+    <header><span class="badge ${LEVEL_CLASS[i.level]}">${esc(levelWord(i.level))}</span><b>${esc(i.rowId)}</b> ${explain(plainTitle(i.title))}</header>
     <p>${esc(i.reason)}</p>
     ${quote}${answer}${nq}${flags}
     ${i.todo ? `<div class="todo">次に：${esc(i.todo)}</div>` : ""}

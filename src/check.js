@@ -25,7 +25,7 @@ const JUDGE_SCHEMA = {
         additionalProperties: false,
         required: [
           "row_id", "status", "reason", "label_quote", "absent_on_label",
-          "answer_keys", "note_quote", "question", "todo_kind", "todo",
+          "answer_keys", "note_quote", "question", "question_why", "ask_who", "todo_kind", "todo",
         ],
         properties: {
           row_id: { type: "string" },
@@ -35,7 +35,9 @@ const JUDGE_SCHEMA = {
           absent_on_label: { type: "boolean", description: "「ラベルに書いていない」ことが根拠なら true" },
           answer_keys: { type: "array", items: { type: "string" }, description: "根拠にした答えの項目名" },
           note_quote: { type: "string", description: "根拠にした決まりノートの行の文。行から一続きにそのまま写す（60字以内、省略記号なし）" },
-          question: { type: "string", description: "分からないとき、何が分かれば決まるかの質問を1つ。それ以外は空" },
+          question: { type: "string", description: "分からないとき、何が分かれば決まるかの質問を1つ。輸出が初めての人がそのまま答えられる言葉で。専門用語・略語・条文番号は使わない（どうしても要るときは括弧で言い換える）。それ以外は空" },
+          question_why: { type: "string", description: "分からないとき、なぜそれで決まるのか、答えによってどう変わるかを1〜2文（例：『常温なら〇〇の届け出が要り、ずっと冷蔵なら要りません』）。専門用語は使わない。それ以外は空" },
+          ask_who: { type: "string", description: "分からないとき、誰に聞けば分かるか（例：工場の品質管理の担当、原料の仕入れ先、相手の国の輸入者、商社）。それ以外は空" },
           todo_kind: { type: "string", enum: TODO_KINDS },
           todo: { type: "string", description: "次にやることを短く1行。無ければ空" },
         },
@@ -69,6 +71,7 @@ const SYSTEM = `あなたは、日本の食品を海外に輸出するときの�
 - 魚の種類の行で、「いわし」「煮干」「ちりめん」のように種が1つに決まらない書き方は「分からない」にし、種名を聞きます。行の文で認められた通称（例：まぐろ＝tuna）で足りるときは「ある」です。
 - 工程や原料の産地しだいで決まる行（干し魚の内臓、牛肉の産地など）で、ラベルにも答えにもその事実が無ければ、推測せず「分からない」にして、工程や産地を聞きます。
 - 「この行では対象外だが、別の行の決まりがかかる」ときは、reason に確かめる行番号を必ず書きます（例：「混合食品としては対象外。水産加工品の施設の確認は EU-F1 へ」）。
+- 「分からない」の質問（question・question_why・ask_who）は、輸出が初めての人が読んで、何を誰に聞けばよいか分かるように書きます。FCE、SID、HACCP、UFI、Prior Notice、第三国リスト、条文番号などの用語は使わず、使うなら「（〇〇のこと）」と言い換えます。
 - 政治的な言い方はしません。公表された決まりの文だけを根拠にします。`;
 
 function answersToText(answers) {
@@ -170,6 +173,8 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
         answerKeys: j.answer_keys || [],
         noteQuote: j.note_quote || j.evidence || "",
         question: status === "分からない" ? j.question || row.labelOrQuestion : "",
+        questionWhy: status === "分からない" ? j.question_why || "" : "",
+        askWho: status === "分からない" ? j.ask_who || "" : "",
         todoKind: j.todo_kind || "なし",
         todo: j.todo || "",
         decidedBy: j.decidedBy || "claude",
