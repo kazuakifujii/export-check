@@ -138,7 +138,33 @@ export function judgeUsLacf(label, answers) {
   };
 }
 
+// EU-P2 アレルゲンの強調（太字など）は、文字だけでは確かめられない。
+// 写真が無いときは、Claude が「ある」「無い」と言っても「分からない」にして、写真で確かめてもらう。
+// 14品目が入っていない（対象外）という判定はそのまま残す。
+export function judgeEuEmphasis(label, answers = {}, claude = {}) {
+  if (claude.status === "対象外") return null;
+  const a = answers["アレルゲンの強調"] || "";
+  const no = /いない|無い|ない$/.test(a);
+  if (a && !no && /目立たせている|太字|色/.test(a)) {
+    return { status: "ある", reason: "原材料欄でアレルゲンを太字などで目立たせている、との答えです。", label_quote: "", question: "", todo_kind: "なし", todo: "", decidedBy: "program" };
+  }
+  if (a && no) {
+    return { status: "無い", reason: "原材料欄でアレルゲンを目立たせていない、との答えです。EU向けのラベルでは、14品目を太字などで目立たせます。", label_quote: "", question: "", todo_kind: "輸出用の表示で足す", todo: "EU向けラベルの原材料欄で、14品目を太字などで目立たせる", decidedBy: "program" };
+  }
+  if (label.fromImage) return null; // 写真があれば Claude が見て判定する
+  return {
+    status: "分からない",
+    reason: "EUでは、原材料欄のアレルゲンを太字などで目立たせる決まりです。文字だけでは太字かどうか分からないので、写真か実物で確かめてください。",
+    label_quote: "",
+    question: "原材料欄のアレルゲン（小麦・大豆など）を、太字や色で目立たせていますか？",
+    todo_kind: "今の表示・原料を直す",
+    todo: "",
+    decidedBy: "program",
+  };
+}
+
 export const PROGRAM_RULES = {
+  "EU-P2": judgeEuEmphasis,
   "0-1": judgeChinaOrigin,
   "US-X1": judgeUsLacf,
 };

@@ -138,7 +138,7 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
         flags.push("AIが答えなかった行（プログラムが「分からない」で埋めました）");
       }
       const programRule = PROGRAM_RULES[row.id];
-      const p = programRule ? programRule(label, answers) : null;
+      const p = programRule ? programRule(label, answers, j) : null;
       if (p) j = { ...j, ...p };
 
       const problems = verifyJudgement(j, row, label, answers);
