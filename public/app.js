@@ -187,7 +187,7 @@ function renderCountry(c) {
   }
   html += `<div class="boxes">`;
   for (const [key, name, sub] of BOX_ORDER) {
-    const items = c.items.filter((i) => i.box === key);
+    const items = c.items.filter((i) => i.box === key && !i.setup);
     // 製品・交差・施設の枠は、当てはまる物が無くても残す（「懸念が見つかっていない」と伝わるように。藤井さん 11/4）
     if (!items.length && key === "入口") continue;
     if (f) {
@@ -208,7 +208,7 @@ function renderCountry(c) {
   }
   html += `</div>`;
 
-  const qs = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
+  const qs = c.items.filter((i) => i.status === "分からない" && i.question && !i.setup).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
   if (qs.length) {
     const usedKeys = new Set();
     const groups = new Map();
@@ -257,10 +257,15 @@ function renderCountry(c) {
     }</ul></div>`;
   }
   html += `</div>`;
-  if (c.ifStopped?.length) {
-    html += `<details class="ifstopped"><summary>もし港で止められたら（${c.ifStopped.length}）</summary><ul>${c.ifStopped
-      .map((t) => `<li><b>${esc(t.title)}</b>：${explain(t.text)} <em>${esc(t.rowId)}</em></li>`)
-      .join("")}</ul></details>`;
+  // 出すと決めた後の段取り。出せるかどうかは左右しないので、閉じておく
+  const setup = c.items.filter((i) => i.setup);
+  if (setup.length && !f) {
+    html += `<details class="ifstopped setup"><summary>出すと決めたら：出荷の段取り（${setup.length}件）</summary>
+      <p class="hint">出せるかどうかを決める話ではありません。輸出すると決めてから、輸入者や通関業者と進めます。</p><ul>${setup
+      .map((i) => `<li><b>${explain(plainTitle(i.title))}</b>：${explain(i.todo || i.question || i.reason)} <em>${esc(i.rowId)}</em></li>`)
+      .join("")}</ul>
+      <div class="handoff"><b>この続きは、Claudeに頼めます。</b>判定の結果と段取りをまとめた相談文を作ります。英語ラベルの案づくりや、輸入者へのメールの下書きも、そこから頼めます。
+        <div><button class="primary" id="handoff">相談文をコピーして、Claudeを開く</button> <span id="handoffMsg" class="hint"></span></div></div></details>`;
   }
   html += `</section>`;
 
@@ -281,6 +286,13 @@ function renderCountry(c) {
     el.addEventListener("mouseenter", () => highlight(el.dataset.quote));
     el.addEventListener("mouseleave", () => highlight(""));
   });
+  const ho = $("#handoff");
+  if (ho) ho.addEventListener("click", async () => {
+    const text = handoffText(c);
+    try { await navigator.clipboard.writeText(text); $("#handoffMsg").textContent = "コピーしました。開いたClaudeに貼り付けてください。"; }
+    catch { $("#handoffMsg").textContent = "コピーできませんでした。"; }
+    window.open("https://claude.ai/new", "_blank", "noopener");
+  });
   const rerun = $("#rerun");
   if (rerun) rerun.addEventListener("click", () => {
     document.querySelectorAll("[data-q]").forEach((el) => {
@@ -289,6 +301,44 @@ function renderCountry(c) {
     });
     run(false, state.country);
   });
+}
+
+// 「出すと決めたら」の続きをClaudeに頼むための相談文（判定はしない。結果をまとめるだけ）
+function handoffText(c) {
+  const t = (x) => plainTitle(x.title);
+  const v = c.verdict || { tier: "進められる見込み", items: [] };
+  const by = (lv) => c.items.filter((i) => i.level === lv && !i.setup);
+  const lines = [
+    `国内で売っている加工食品を、${c.name}へ輸出する準備を手伝ってください。輸出は初めてです。`,
+    "",
+    "## 商品のラベル（日本語）",
+    ...(state.label?.lines || []),
+    "",
+    `## 輸出チェックの見立て（判定日 ${state.result.asOf}）：${v.tier}`,
+    ...v.items.map((x) => `- ${t(x)}${x.workaround ? `（回避策：${x.workaround.replace(/【[^】]*】/g, "")}）` : ""}`),
+    "",
+    "## 直す所",
+    ...by("直せば出せる").map((i) => `- ${t(i)}：${i.todo || i.reason}`),
+    ...by("出せない").map((i) => `- 【出荷できない条件】${t(i)}：${i.todo || i.reason}`),
+    "",
+    "## 輸出用ラベルで足す所",
+    ...by("輸出用に足す").map((i) => `- ${t(i)}`),
+    "",
+    "## まだ決まっていないこと",
+    ...c.items.filter((i) => i.status === "分からない" && i.question && !i.setup).map((i) => `- ${i.question}（${whoGroup(i.askWho, i.todoKind)}に聞く）`),
+    "",
+    "## 出すと決めた後の段取り",
+    ...c.items.filter((i) => i.setup).map((i) => `- ${t(i)}：${i.todo || i.reason}`),
+    "",
+    "## お願い",
+    "1. 上の段取りを、誰が・いつまでに・何をするかの順番表にしてください。",
+    `2. ${c.name}向けのラベル表示案（${c.name === "中国" ? "中国語" : "英語"}）の下書きを作ってください。分からない所は空欄にして、聞いてください。`,
+    "3. 輸入者に確かめるメールの下書きを作ってください。",
+    "規制の話には、公的な出典を付けてください。この結果は判定ルールに基づく相談の準備用で、輸入許可や通関を保証するものではありません。",
+  ];
+  // 中身の無い見出しは外す
+  const out = lines.filter((l, k) => !(l.startsWith("## ") && (lines[k + 1] ?? "") === ""));
+  return out.join("\n").replace(/\n{3,}/g, "\n\n");
 }
 
 // 用語の言い換え。画面の文に出てきたら、点線の下線とマウスを乗せたときの説明をつける
@@ -440,7 +490,7 @@ function renderAnnotated() {
   const lines = state.label.lines;
   const cs = ["US", "EU", "CN"].filter((c) => r.countries[c]);
   const rest = ["US", "EU", "CN"].filter((c) => !r.countries[c]);
-  const keep = (i) => ["出せない", "直せば出せる", "確認が必要", "輸出用に足す"].includes(i.level);
+  const keep = (i) => !i.setup && ["出せない", "直せば出せる", "確認が必要", "輸出用に足す"].includes(i.level);
   const makerLine = lines.findIndex((l) => /製造者|製造所|販売者|加工者/.test(l));
   // place[国][行] = 指摘の配列。最後の行（lines.length）は「ラベルに書いていない所」
   const place = {};
@@ -501,10 +551,10 @@ function shortWays(w) {
 function outlook(c) {
   const name = esc(c.name);
   const v = c.verdict || { tier: "進められる見込み", items: [] };
-  const qs = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
+  const qs = c.items.filter((i) => i.status === "分からない" && i.question && !i.setup).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
   const q0 = qs[0];
   // ラベル以外（工場・手続き）で残っている直す所。「ラベルを貼れば出せる」と思わせないため、見立てが良くても必ず出す
-  const beyondAll = c.items.filter((i) => i.level === "直せば出せる" && ["施設", "交差"].includes(i.box));
+  const beyondAll = c.items.filter((i) => i.level === "直せば出せる" && !i.setup && ["施設", "交差"].includes(i.box));
   const beyond = beyondAll.slice(0, 3);
   const beyondMore = beyondAll.length > 3 ? ` ほか${beyondAll.length - 3}件` : "";
   const MSG = {

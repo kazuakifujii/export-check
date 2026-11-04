@@ -193,7 +193,7 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
         marks: row.marks,
         upcoming,
       };
-    });
+    }).map((i) => ({ ...i, setup: isSetup(i) }));
 
     const origin = c === "CN" ? items.find((i) => i.rowId === "0-1") : null;
     const stoppedAtEntry = origin && origin.status === "無い" ? origin : null;
@@ -214,10 +214,23 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
 }
 
 function summarize(items) {
-  const s = { 出せない: 0, 直せば出せる: 0, 確認が必要: 0, 輸出用に足す: 0, 問題なし: 0, 対象外: 0 };
-  for (const i of items) s[i.level] = (s[i.level] || 0) + 1;
+  const s = { 出せない: 0, 直せば出せる: 0, 確認が必要: 0, 輸出用に足す: 0, 問題なし: 0, 対象外: 0, 段取り: 0 };
+  for (const i of items) {
+    const k = i.setup ? "段取り" : i.level;
+    s[k] = (s[k] || 0) + 1;
+  }
   return s;
 }
+
+// 出すと決めた後の段取り（出せるかどうかは左右しない行）。「確かめること」から外し、閉じた欄にまとめる
+// （藤井さん 11/4「本筋から離れてない？」。線引きは議論で詰める）
+export const SETUP_IDS = new Set([
+  "US-F2", "US-F3", "US-F6", "US-F7", "US-F9", "US-F10", "US-F11", "US-F12", "US-F13", "US-F14", "US-F15", "US-F16", "US-F17",
+  "US-X9", "US-X12", "US-P23",
+  "EU-F6",
+  "CN-F3", "CN-F5", "CN-F7", "CN-X2", "CN-X5", "CN-X9", "CN-P6", "CN-P9",
+]);
+export const isSetup = (i) => (SETUP_IDS.has(i.rowId) || isAfterStop(i)) && !["出せない", "対象外"].includes(i.level);
 
 // 止められた後の期限の行は「明日やること」に入れず、「もし港で止められたら」として別に出す（設計の決定 11/4）
 const AFTER_STOP_IDS = new Set(["US-F18", "EU-F7", "CN-X7"]);
@@ -250,7 +263,7 @@ function tomorrowList(items) {
   const lists = { 輸入者に聞く: [], 日本で取る書類: [], 出荷ごと: [] };
   for (const i of items) {
     if (i.status === "対象外") continue;
-    if (isAfterStop(i)) continue;
+    if (isAfterStop(i) || i.setup) continue;
     if (!lists[i.todoKind]) continue;
     const text = i.todo || i.question;
     if (!text) continue;
