@@ -493,31 +493,44 @@ function renderAnnotated(c) {
 }
 
 // 一番上の「見立てと次の一歩」（議論の結論 11/4：主役は輸出の可能性と次の一歩。確率は出さない）
-// 回避策の短い形：①②③ごとに、かっこの前だけ。くわしい注意は開いたら見える
+// 回避策の短い形：①②③ごとに「一言」と【残る：〜】。かっこの中（くわしい説明）は開いたら見える
 function shortWays(w) {
   const parts = String(w || "").split(/(?=[①②③④⑤])/).map((x) => x.trim()).filter(Boolean);
-  return parts.filter((x) => !/^相談先/.test(x)).map((x) => x.replace(/[（(].*$/s, "").replace(/。.*$/s, "").trim()).filter(Boolean).slice(0, 3);
+  return parts
+    .filter((x) => !/^相談先/.test(x))
+    .map((x) => {
+      const remain = (x.match(/【残る[：:]([^】]+)】/) || [])[1] || "";
+      const head = x.replace(/【[^】]*】/g, "").replace(/[（(].*$/s, "").replace(/。.*$/s, "").trim();
+      return { head, remain };
+    })
+    .filter((x) => x.head)
+    .slice(0, 3);
 }
 function outlook(c) {
   const name = esc(c.name);
   const v = c.verdict || { tier: "進められる見込み", items: [] };
   const qs = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
   const q0 = qs[0];
+  // ラベル以外（工場・手続き）で残っている直す所。「ラベルを貼れば出せる」と思わせないため、見立てが良くても必ず出す
+  const beyondAll = c.items.filter((i) => i.level === "直せば出せる" && ["施設", "交差"].includes(i.box));
+  const beyond = beyondAll.slice(0, 3);
+  const beyondMore = beyondAll.length > 3 ? ` ほか${beyondAll.length - 3}件` : "";
   const MSG = {
-    入口で無理: ["ol-stop", `${name}へは、出せません。`, "国として受け入れを止めている条件に当たります。"],
-    現実的に厳しい: ["ol-hard", `${name}へは、かなり難しいです。`, "今のところ、現実的な回避策が見つかっていません。"],
+    入口で無理: ["ol-stop", `${name}へは、今の仕様では輸出できません。`, "国として受け入れを止めている条件です。この道具では回避策を見つけられていません。"],
+    現実的に厳しい: ["ol-hard", `${name}へは、大きな課題があります。`, "制度の上では道がありますが、この道具では現実的な回避策を見つけられていません。"],
     回避策がある: ["ol-way", `${name}へは、このままでは出せません。でも回避策があります。`, ""],
-    進められる見込み: ["ol-go", `${name}へは、進められそうです。`, "下の「直す所」と「確かめること」を片づけましょう。"],
+    進められる見込み: ["ol-go", `${name}へは、進めそうです。`, ""],
   }[v.tier];
   const li = (x) => {
     const ways = v.tier === "回避策がある" ? shortWays(x.workaround) : [];
     return `<li><b>${explain(plainTitle(x.title))}</b>
-      ${ways.length ? `<div class="way">回避策：${ways.map((w) => explain(w)).join("／")}</div>` : ""}
+      ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
       <details class="more"><summary>くわしく</summary>${x.reason ? `<p>${explain(x.reason)}</p>` : ""}${x.workaround ? `<p>${explain(x.workaround)}</p>` : ""}</details></li>`;
   };
   return `<div class="outlook ${MSG[0]}"><span class="tier">${esc(v.tier)}</span>
     <p class="ol-main">${MSG[1]}</p>${MSG[2] ? `<p>${MSG[2]}</p>` : ""}
     ${v.items.length ? `<ul class="ol-list">${v.items.map(li).join("")}</ul>` : ""}
+    ${v.tier === "進められる見込み" && beyond.length ? `<p class="beyond"><b>ただし、ラベル以外にも残っています：</b>${beyond.map((i) => explain(plainTitle(i.title))).join("、")}${beyondMore}</p>` : ""}
     ${q0 ? `<p><b>まず確かめること：</b>${explain(q0.question)}（${esc(whoGroup(q0.askWho, q0.todoKind))}へ）</p>` : ""}
     <p class="hint">相談の準備用です。出荷の前に、輸入者と確かめてください。</p></div>`;
 }

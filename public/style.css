@@ -182,3 +182,4 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .way { background: #fff; border: 1px dashed var(--ask); border-radius: 6px; padding: 4px 8px; margin-top: 4px; font-size: 13px; }
 .tier-s { font-size: 12px; background: var(--accent); color: #fff; border-radius: 10px; padding: 1px 8px; vertical-align: middle; }
 .more summary { font-size: 12px; color: var(--muted); } .more p { font-size: 12px; color: var(--muted); margin: 2px 0; }
+.way ul { margin: 2px 0; padding-left: 1.2em; } .remain { color: var(--fix); font-size: 12px; } .beyond { font-size: 14px; }
