@@ -141,3 +141,6 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .qgroup { border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; margin: 8px 0; background: #fff; }
 .qgroup summary { font-weight: 700; color: var(--ink); }
 .progress { font-size: 14px; margin: 4px 0; }
+.summary .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
+.guide { background: #faf9f6; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
+.guide p { margin: 2px 0; } .g-stop { color: var(--stop); } .g-fix { color: var(--fix); } .g-ask { color: var(--ask); }

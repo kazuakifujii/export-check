@@ -108,7 +108,14 @@ function highlight(quote) {
 
 // ---------- 結果 ----------
 // 画面に出す言葉（中のしくみの名前とは分けて、誤解されにくい言い方にする）
-const LEVEL_WORD = { 直せば出せる: "直す所あり（直したら再確認）", 問題なし: "見た範囲では問題なし" };
+const LEVEL_WORD = {
+  出せない: "出荷できない条件があります",
+  直せば出せる: "直す所があります",
+  確認が必要: "確かめること",
+  輸出用に足す: "輸出用ラベルで足す所",
+  問題なし: "確認した範囲では問題は見つかっていません",
+  対象外: "この商品には当てはまらない項目",
+};
 const levelWord = (l) => LEVEL_WORD[l] || l;
 const LEVEL_CLASS = { 出せない: "lv-stop", 直せば出せる: "lv-fix", 確認が必要: "lv-ask", 輸出用に足す: "lv-add", 問題なし: "lv-ok", 対象外: "lv-na" };
 const BOX_ORDER = [
@@ -156,13 +163,20 @@ function renderCountry(c) {
   const chip = (lv, word) =>
     `<button class="chip ${LEVEL_CLASS[lv]} ${f === lv ? "on" : ""} ${f && f !== lv ? "dim" : ""}" data-lv="${lv}" title="押すと、これだけを表示します" ${s[lv] ? "" : "disabled"}>${word} ${s[lv]}</button>`;
   let html = `<div class="summary">
-    ${chip("出せない", "出せない")}${chip("直せば出せる", "直す所あり")}${chip("確認が必要", "確認が必要")}${chip("輸出用に足す", "輸出用に足す")}${chip("問題なし", "見た範囲では問題なし")}${chip("対象外", "対象外")}
+    ${chip("出せない", "出荷できない条件")}${chip("直せば出せる", "直す所")}${chip("確認が必要", "確かめること")}
+    <span class="sep"></span>${chip("輸出用に足す", "輸出用ラベルで足す所")}${chip("問題なし", "問題は見つかっていない")}${chip("対象外", "当てはまらない")}
     <span class="count">決まりノート ${c.noteRows}行のうち ${c.checkedRows}行を判定（判定日 ${esc(state.result.asOf)}）</span>
+  </div>
+  <div class="guide">
+    ${s["出せない"] ? `<p><b class="g-stop">出荷できない条件があります（${s["出せない"]}）</b>　理由と、進むための条件を見ましょう。</p>` : ""}
+    ${s["直せば出せる"] ? `<p><b class="g-fix">直す所があります（${s["直せば出せる"]}）</b>　表示の修正、または登録・証明書の取得です。直したら、もう一度確かめます。</p>` : ""}
+    ${s["確認が必要"] ? `<p><b class="g-ask">確かめること（${s["確認が必要"]}）</b>　誰に聞けばよいかも示します。</p>` : ""}
+    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが片づくまでは出荷を待ち、輸入者と確かめましょう。</p>` : `<p class="hint">決まりノートで見た範囲では、引っかかる所は見つかっていません。出荷の前に、輸入者と窓口で確かめてください。</p>`}
   </div>`;
 
   if (c.stoppedAtEntry) {
-    html += `<div class="banner stop"><strong>入口で止まります。</strong>${esc(c.stoppedAtEntry.reason)}
-      <br>産地を変えない限り、この国には出せません。下の行は参考として見てください。</div>`;
+    html += `<div class="banner stop"><strong>この国への入口で、確かめる条件があります。</strong>${esc(c.stoppedAtEntry.reason)}
+      <br>この産地のままでは、この国へは出荷できない条件があります。下の行は、産地を変えた場合の参考として見てください。</div>`;
   }
 
   if (f) {
@@ -183,17 +197,18 @@ function renderCountry(c) {
     const na = items.filter((i) => i.level === "対象外");
     html += `<section class="box box-${key}">
       <h3>${name}<small>${sub}</small></h3>
-      ${shown.map(card).join("") || `<p class="hint">引っかかる所はありません</p>`}
-      ${add.length ? `<details class="addon"><summary>＋α 輸出用のラベルを作るときに足すもの（${add.length}）</summary>
+      ${shown.map(card).join("") || `<p class="hint">ここで引っかかる所は見つかっていません</p>`}
+      ${add.length ? `<details class="addon"><summary>＋α 輸出用ラベルで足す所（${add.length}）</summary>
         <p class="hint">日本のラベルに無いのは当たり前のものです。輸出用のラベルを作るときに入れてください。</p>${add.map(card).join("")}</details>` : ""}
     </section>`;
   }
   html += `</div>`;
 
-  const qs = c.items.filter((i) => i.status === "分からない" && i.question);
+  const qs = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
   if (qs.length) {
     const usedKeys = new Set();
     const groups = new Map();
+    const firstThree = [];
     qs.forEach((i) => {
       const fields = (QUESTION_FIELDS[i.rowId] || []).filter((f) => !usedKeys.has(f.key));
       fields.forEach((f) => usedKeys.add(f.key));
@@ -204,9 +219,10 @@ function renderCountry(c) {
               ? `<select data-q="${esc(f.key)}"><option value=""></option>${f.select.map((o) => `<option ${state.extraAnswers[f.key] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
               : `<input data-q="${esc(f.key)}" placeholder="${esc(f.placeholder || "")}" value="${esc(state.extraAnswers[f.key] || "")}">`
           }</label>`).join("")
-        : `<input data-q="${esc(i.rowId)}の答え" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
+        : `<input data-q="${esc(i.rowId)}の答え" list="ansChoices" placeholder="分かれば書く／選ぶ" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
       const why = fields.map((f) => f.why).filter(Boolean).join(" ") || i.questionWhy || i.reason;
       const who = whoGroup(i.askWho, i.todoKind);
+      if (firstThree.length < 3) { firstThree.push(qHtml(i, inputs, why, who)); return; }
       if (!groups.has(who)) groups.set(who, []);
       groups.get(who).push(`<div class="q"><div>
         <div class="q-topic">${explain(plainTitle(i.title))} <small>${esc(i.rowId)}</small></div>
@@ -216,11 +232,15 @@ function renderCountry(c) {
     });
     const order = [...WHO_GROUPS.map((g) => g[0]), "そのほか"];
     const rowsHtml = order.filter((w) => groups.has(w)).map((w) =>
-      `<details class="qgroup" open><summary>${esc(w)}に聞く ${groups.get(w).length}つ</summary>${groups.get(w).join("")}</details>`).join("");
+      `<details class="qgroup"><summary>${esc(w)}に聞く ${groups.get(w).length}つ</summary>${groups.get(w).join("")}</details>`).join("");
+    const firstHtml = firstThree.join("");
     const decided = c.items.length - qs.length;
+    const rest = qs.length - firstThree.length;
     html += `<section class="questions"><h3>次に確かめること</h3>
-      <p class="progress">決まりノート ${c.items.length}行のうち <b>${decided}行</b>は、もう見終わりました。残りは ${qs.length}行です。<span class="hint">（見終わった＝問題なし、ではありません。上の判定を見てください）</span></p>
-      <p class="hint">一人で全部答えなくて大丈夫です。分かる人に聞いて、分かった所から入れてください。未確認のままでも進めますが、未確認の所は「確認が必要」として残ります。点線の下線の言葉は、マウスを乗せると意味が出ます。</p>
+      <p class="progress">まずこの${firstThree.length}件です${rest > 0 ? `（残り${rest}件）` : ""}。答えると、ほかの行も一緒に決まりやすい順に並べています。</p>
+      <p class="hint">一人で全部答えなくて大丈夫です。分かる人に聞いて、分かった所から入れてください。「社内に聞きます」「まだ決まっていません」のように答えても進めます。点線の下線の言葉は、マウスを乗せると意味が出ます。</p>
+      ${firstHtml}
+      ${rest > 0 ? `<p class="hint" style="margin-top:12px">残りは、聞く相手ごとにまとめています。</p>` : ""}
       ${rowsHtml}
       <button class="primary" id="rerun">答えて、もう一度チェック</button></section>`;
   }
@@ -248,9 +268,10 @@ function renderCountry(c) {
   // 当てはまらない決まりは、全部見た証拠として一番下に畳んで置く
   const naAll = c.items.filter((i) => i.level === "対象外");
   if (naAll.length && !f) {
-    html += `<details class="na naall"><summary>この商品に当てはまらない決まり ${naAll.length}件（開く）</summary>
+    html += `<details class="na naall"><summary>この商品には当てはまらない項目 ${naAll.length}件（開く）</summary>
       <p class="hint">決まりノートの行は全部当てはめています。ここは、この商品には関係しないと判定した行です。</p>${naAll.map(card).join("")}</details>`;
   }
+  html += `<datalist id="ansChoices"><option value="社内に聞きます"><option value="仕入先に聞きます"><option value="測っていません"><option value="まだ決まっていません"></datalist>`;
   $("#countryBody").innerHTML = html;
   document.querySelectorAll(".card").forEach((el) => {
     el.addEventListener("mouseenter", () => highlight(el.dataset.quote));
@@ -302,6 +323,27 @@ function plainTitle(t) {
 }
 
 // 3つの要件の概念図（例つき）。結果の上に出して、各行がどこに入るかを分かるようにする
+// 答えると他の行も決まりやすい順（議論の結論 11/4）：売り先・輸入の責任者 → 国ごとの順
+const Q_ORDER = {
+  ALL: [/売り先|販売先|輸入者|輸入の責任|どの国で売/],
+  US: [/肉|卵|豚|鶏|牛/, /魚|水産|種名|魚種/, /pH|水分活性|冷蔵|常温|殺菌/],
+  EU: [/肉|卵|乳|魚|水産|動物性/, /施設|認定|第三国/],
+  CN: [/産地|都県|最後に加工|最終加工/, /登録|証明書|推薦/],
+};
+function qPriority(i, code) {
+  const t = `${i.title} ${i.question}`;
+  const lists = [...Q_ORDER.ALL, ...(Q_ORDER[code] || [])];
+  const k = lists.findIndex((re) => re.test(t));
+  return k === -1 ? 99 : k;
+}
+function qHtml(i, inputs, why, who) {
+  return `<div class="q"><div>
+    <div class="q-topic">${explain(plainTitle(i.title))} <small>${esc(i.rowId)}・${esc(who)}に聞く</small></div>
+    <div class="q-ask">${explain(i.question)}</div>
+    ${why ? `<div class="why"><b>なぜ聞くか：</b>${explain(why)}</div>` : ""}
+  </div><div class="qin">${inputs}</div></div>`;
+}
+
 // 聞く相手ごとにまとめる（答えが返ってきた言葉から振り分ける）
 const WHO_GROUPS = [
   ["工場の品質管理の担当", /工場|品質|製造|自社/],
@@ -319,13 +361,13 @@ function whoGroup(askWho, todoKind) {
 function conceptMap() {
   return `<figure class="concept">
     <p class="concept-lead">ラベルを直せば出せる、とは限りません。この3つをセットで見ないと、見落とします。</p>
-    <div class="cbox c-製品"><b>製品の要件</b><small>ラベルと原料が、相手の国の決まりに合うか</small>
+    <div class="cbox c-製品"><b>製品の要件</b><small>ラベルと原料を、相手の国に合わせる</small>
       <ul><li>アレルゲンの表示</li><li>使える添加物・着色料</li><li>栄養成分の表示</li></ul></div>
     <div class="carrow">→</div>
-    <div class="cbox c-交差"><b>交差するところ</b><small>この商品を、この工場で作るから生まれる決まり。ラベルだけ見ても、工場だけ見ても気づきません</small>
+    <div class="cbox c-交差"><b>交差するところ</b><small>商品だけ、工場だけでは分からない条件を、先に見つけます</small>
       <ul><li>常温のレトルトは、米国で殺菌工程の届け出が要ることがある</li><li>鰹節入りは、EUの認定施設の鰹節が要ることがある</li></ul></div>
     <div class="carrow">←</div>
-    <div class="cbox c-施設"><b>施設の要件</b><small>作る・包む・保管する場所に、登録や衛生管理があるか</small>
+    <div class="cbox c-施設"><b>施設の要件</b><small>作る・包む・保管する場所の準備</small>
       <ul><li>工場の登録</li><li>ラベルを貼るだけの倉庫も、登録が要ることがある</li></ul></div>
     <figcaption>チャットのAIにラベルを見せて聞くと、書いてある物だけを確かめ、欄ごと無い項目や真ん中の決まりを見落としがちです。だからこの道具は、決まりノートの行を<strong>1行も飛ばさず</strong>全部当てはめます（ノートに無い決まりは見られません）。</figcaption>
   </figure>`;
@@ -334,8 +376,8 @@ $("#conceptHead").innerHTML = conceptMap();
 
 function card(i) {
   const up = i.upcoming.map((d) => `<span class="tag up">${esc(d.label)} ${esc(d.date)}</span>`).join("");
-  const weak = i.weakSource ? `<span class="tag weak" title="${esc(i.marks.join(" "))}">根拠の条文・当局資料は未確認</span>` : "";
-  const prog = i.decidedBy === "program" ? `<span class="tag prog">決まった計算で判定</span>` : "";
+  const weak = i.weakSource ? `<span class="tag weak" title="${esc(i.marks.join(" "))}">出典は二次資料です。出荷前に窓口で確かめてください</span>` : "";
+  const prog = i.decidedBy === "program" ? `<span class="tag prog">判定ルールに基づく結果です</span>` : "";
   const flags = i.flags.length ? `<div class="flags">言い切れないので「確認が必要」にしました：${i.flags.map(esc).join("／")}</div>` : "";
   const quote = i.labelQuote ? `<div class="q-label">ラベル：「${esc(i.labelQuote)}」</div>` : i.absentOnLabel ? `<div class="q-label">ラベル：書いていない</div>` : "";
   const answer = i.answerKeys.length ? `<div class="q-label">答え：${i.answerKeys.map(esc).join("、")}</div>` : "";
