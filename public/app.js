@@ -625,7 +625,7 @@ function cnBand(c) {
   const head = { 止まる: "中国へは、この産地のままでは出せません。", "10都県の外": "産地では止まりません。", 原料を聞く: "工場の県は10都県の外です。主な原料の産地を確かめます。", 固有記号: "工場の県が分かりません。", 分からない: "産地で止まるかは、まだ決まっていません。" }[o.state];
   const ask = !["止まる", "10都県の外"].includes(o.state);
   return `<div class="outlook usclass ${tone}"><span class="tier">中国：工場と原料の産地</span><p class="ol-main">${esc(head)}</p><p>${explain(o.why)}</p>
-    <p class="hint">中国は、福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野の食品を止めています。工場が登録済みでも、最後に加工した所か主な原料がここなら止まります。</p>
+    <p class="hint">中国は、福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野の食品を止めています。工場が登録済みでも、最後に加工した所か、主な原料（重さで一番多い原料）がここなら止まります。ほかの原料の産地は問われません。</p>
     ${ask ? `<div class="usask"><div class="qin"><label class="qf"><span>最後に加工した工場と、主な原料の都道府県</span><input data-q="主な原料の産地" placeholder="例：工場は静岡県、原料も静岡県" value="${esc(state.extraAnswers["主な原料の産地"] || "")}"></label></div><button class="primary rerun2">入れて、もう一度チェック</button></div>` : ""}</div>`;
 }
 
