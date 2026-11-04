@@ -586,7 +586,7 @@ function usClassBand(c) {
     ${needs.length ? `<div class="way"><b>当たると要るもの</b><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul></div>` : ""}
     ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
     ${ask ? `<div class="usask"><b>品質管理の担当に聞いて、入れてください</b>（「この商品の完成品の pH と水分活性を教えてください」）
-      <div class="qin">${inp("pH", "pH", "例：5.8")}${inp("Aw", "水分活性", "例：0.97")}<label class="qf"><span>工場から店までの温度</span><select data-q="保存"><option value=""></option>${["ずっと冷蔵", "途中で常温に置く時間がある", "常温"].map((o) => `<option ${state.extraAnswers["保存"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label></div>
+      <div class="qin">${u.needSealedQuestion ? `<label class="qf"><span>密封して加熱殺菌していますか</span><select data-q="密封・加熱殺菌"><option value=""></option>${["はい", "いいえ"].map((o) => `<option ${state.extraAnswers["密封・加熱殺菌"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label>` : ""}${inp("pH", "pH", "例：5.8")}${inp("Aw", "水分活性", "例：0.97")}<label class="qf"><span>工場から店までの温度</span><select data-q="保存"><option value=""></option>${["ずっと冷蔵", "途中で常温に置く時間がある", "常温"].map((o) => `<option ${state.extraAnswers["保存"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label></div>
       <button class="primary rerun2">入れて、もう一度チェック</button></div>` : ""}
   </div>`;
 }

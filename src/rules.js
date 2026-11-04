@@ -181,37 +181,49 @@ export const PROGRAM_RULES = {
 // 米国の「缶詰・瓶詰・レトルトの区分」（見せ場。藤井さん 11/4）
 // 乾物以外は、低酸性缶詰食品（LACF）／酸性化食品（AF）／冷蔵・冷凍／対象外 のどれかを必ず出す。
 // 数値（pH・水分活性）が無い時は「見込み」とし、聞き返す。根拠：21 CFR 113.3・114.3、FDA「LACF/AF Precursor Questions」問1・3・5。
-const ACID_RE = /醸造酢|米酢|穀物酢|りんご酢|黒酢|果実酢|酢|クエン酸|酸味料|乳酸|リンゴ酸|酢酸|ｐＨ調整剤|pH調整剤/;
-const SEALED_RE = /加圧加熱|レトルト|気密性容器|密封|缶|瓶|びん|殺菌/;
-const DRY_RE = /乾燥|乾物|粉末|顆粒|ふりかけ|焙煎|フリーズドライ|スナック|せんべい|クッキー|あめ|飴/;
+// 酸は酢・クエン酸・酸味料などに絞る（乳酸カルシウム・pH調整剤は酸を加えたことにならない場合が多いので外す）
+const ACID_RE = /醸造酢|米酢|穀物酢|りんご酢|黒酢|果実酢|ワインビネガー|酢(?!酸)|クエン酸(?!\s*(Ca|カルシウム|鉄|Na|ナトリウム))|酸味料|酢酸(?!\s*(Na|ナトリウム))|リンゴ酸|乳酸(?!\s*(Ca|カルシウム|菌|Na|ナトリウム))/;
+const SEALED_RE = /加圧加熱|レトルト|気密性容器|密封|缶詰|びん詰|瓶詰|殺菌/;
+const DRY_RE = /乾燥|乾物|粉末|顆粒|ふりかけ|焙煎|フリーズドライ|スナック|せんべい|煎餅|あられ|クッキー|ビスケット|あめ|飴|削りぶし|削り節|かつお節|鰹節|節$/;
+// 区分を出さずに聞く物（114.3(b) の除外や、水分・塩分で決まる物）
+const EXCLUDED_RE = /ジャム|マーマレード|プリザーブ|ゼリー/;
+const ASK_RE = /みそ|味噌|しょうゆ|醤油|羊羹|ようかん|どら焼|まんじゅう|饅頭|大福|最中|カステラ|和菓子|洋菓子|ケーキ|佃煮|つくだ煮/;
 export function usCannedClass(label, answers = {}) {
   const storage = [answers["保存"] || "", fieldValue(label, "保存方法")].join(" ");
   const sterilize = [answers["殺菌"] || "", fieldValue(label, "殺菌方法"), answers["容器"] || ""].join(" ");
-  const name = [fieldValue(label, "名称"), fieldValue(label, "品名"), fieldValue(label, "種類別")].join(" ");
+  const name = [fieldValue(label, "名称"), fieldValue(label, "品名"), fieldValue(label, "種類別")].join(" ").trim();
   const ingredients = fieldValue(label, "原材料名") || (label.lines || []).join(" ");
   const pH = num(answers["pH"]);
   const aw = num(answers["Aw"] ?? answers["水分活性"]);
   const acid = ACID_RE.test(ingredients);
-  const base = { pH, aw, acidInIngredients: acid };
+  const sealedAns = answers["密封・加熱殺菌"] || "";
+  const sealed = /はい/.test(sealedAns) || (!/いいえ/.test(sealedAns) && SEALED_RE.test(sterilize));
+  const base = { pH, aw, acidInIngredients: acid, needSealedQuestion: false };
   if (/ずっと冷蔵/.test(answers["保存"] || "") || /冷凍/.test(storage) || (/冷蔵|要冷|10℃以下|10°C以下/.test(storage) && !/常温/.test(answers["保存"] || "")))
     return { ...base, cls: "冷蔵・冷凍", sure: true, why: "冷蔵・冷凍で保管・流通・販売する食品は、低酸性・酸性化食品の手続きの対象外です。ただし、店まで本当に冷蔵であることが条件です。" };
   if (aw !== null && aw <= 0.85)
     return { ...base, cls: "対象外", sure: true, why: `水分活性 ${aw}（0.85以下）なので、低酸性・酸性化食品には当たりません。` };
-  if (pH !== null && aw !== null) {
-    if (pH > 4.6) return { ...base, cls: "低酸性缶詰食品", sure: SEALED_RE.test(sterilize), why: `pH ${pH}（4.6超）・水分活性 ${aw}（0.85超）の常温の密封・加熱殺菌品です。` };
-    if (acid || /酸を加え|加えた|はい/.test(answers["酸を加えたか"] || ""))
+  if (/非加熱/.test(sterilize + " " + name) || /いいえ/.test(sealedAns))
+    return { ...base, cls: "対象外", sure: false, why: "密封して加熱殺菌する食品ではない見込みなので、低酸性・酸性化食品には当たりません。" };
+  if (EXCLUDED_RE.test(name))
+    return { ...base, cls: "対象外", sure: false, why: "ジャム・ゼリー類は、酸性化食品の決まりから外されています（21 CFR 114.3(b)）。" };
+  if (pH !== null && aw !== null && sealed) {
+    if (pH > 4.6) return { ...base, cls: "低酸性缶詰食品", sure: true, why: `pH ${pH}（4.6超）・水分活性 ${aw}（0.85超）の常温の密封・加熱殺菌品です。` };
+    if (acid || /はい/.test(answers["酸を加えたか"] || ""))
       return { ...base, cls: "酸性化食品", sure: true, why: `pH ${pH}（4.6以下）ですが、酢などの酸を加えて下げているので、酸性化食品です。` };
     return { ...base, cls: "対象外", sure: false, why: `pH ${pH}（4.6以下）。酸を加えずにもともと酸性なら対象外です（酸を加えていれば酸性化食品）。` };
   }
   if (/^\s*(醸造酢|米酢|穀物酢|りんご酢|黒酢|果実酢|酢)/.test(ingredients))
     return { ...base, cls: "対象外", sure: false, why: "主な原料が酢なので、もともと酸性の食品（酸性食品）の見込みです。pHが4.6以下なら対象外です。" };
-  if (DRY_RE.test(name + " " + storage) && !SEALED_RE.test(sterilize))
+  if (DRY_RE.test(name) && !/レトルト|缶詰|びん詰|瓶詰/.test(sterilize))
     return { ...base, cls: "対象外", sure: false, why: "乾燥した食品の見込みです。水分活性が0.85以下なら対象外です。" };
-  if (SEALED_RE.test(sterilize) || /常温/.test(storage)) {
+  if (ASK_RE.test(name))
+    return { ...base, cls: "分からない", sure: false, needSealedQuestion: !sealed, why: "水分活性（塩分や糖分の多さ）と、密封して加熱殺菌しているかで決まります。" };
+  if (sealed) {
     const cls = acid ? "酸性化食品" : "低酸性缶詰食品";
     return { ...base, cls, sure: false, why: acid
       ? "常温で売る密封・加熱殺菌品で、原材料に酢などの酸があります。pHと水分活性で決まります。"
       : "常温で売る密封・加熱殺菌品です。pHと水分活性で決まります。" };
   }
-  return { ...base, cls: "分からない", sure: false, why: "殺菌の方法と保存の温度が分かると、区分が決まります。" };
+  return { ...base, cls: "分からない", sure: false, needSealedQuestion: true, why: "密封して加熱殺菌しているかと、pH・水分活性で決まります。" };
 }
