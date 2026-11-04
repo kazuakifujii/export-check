@@ -189,6 +189,15 @@ const DRY_RE = /乾燥|乾物|粉末|顆粒|ふりかけ|焙煎|フリーズド�
 const EXCLUDED_RE = /ジャム|マーマレード|プリザーブ|ゼリー/;
 const ASK_RE = /みそ|味噌|しょうゆ|醤油|羊羹|ようかん|どら焼|まんじゅう|饅頭|大福|最中|カステラ|和菓子|洋菓子|ケーキ|佃煮|つくだ煮/;
 export function usCannedClass(label, answers = {}) {
+  const r = usCannedClassCore(label, answers);
+  const text = [fieldValue(label, "名称"), fieldValue(label, "品名"), fieldValue(label, "原材料名")].join(" ");
+  // 区分とは別に、商品の種類で許可や届け出が要るもの（決まりノート US-X13・X14）
+  const also = [];
+  if (/果汁|ジュース/.test(text)) also.push("果汁を使った飲み物は、ジュースのHACCP（US-X13）も当たります。");
+  if (/清酒|日本酒|焼酎|ビール|ワイン|リキュール|梅酒/.test(text)) also.push("お酒は、輸入者の輸入許可とラベルの承認（US-X14）が要ります。");
+  return { ...r, also };
+}
+function usCannedClassCore(label, answers = {}) {
   const storage = [answers["保存"] || "", fieldValue(label, "保存方法")].join(" ");
   const sterilize = [answers["殺菌"] || "", fieldValue(label, "殺菌方法"), answers["容器"] || ""].join(" ");
   const name = [fieldValue(label, "名称"), fieldValue(label, "品名"), fieldValue(label, "種類別")].join(" ").trim();

@@ -582,7 +582,7 @@ function usClassBand(c) {
   const ways = lacf || af ? shortWays(row?.workaround) : [];
   const ask = !u.sure && u.cls !== "冷蔵・冷凍";
   const inp = (key, label, ph) => `<label class="qf"><span>${label}</span><input data-q="${key}" placeholder="${ph}" value="${esc(state.extraAnswers[key] || "")}"></label>`;
-  return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p><p>${explain(u.why)}</p>
+  return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p><p>${explain(u.why)}</p>${(u.also || []).map((a) => `<p><b>あわせて：</b>${explain(a)}</p>`).join("")}
     ${needs.length ? `<div class="way"><b>当たると要るもの</b><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul></div>` : ""}
     ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
     ${ask ? `<div class="usask"><b>品質管理の担当に聞いて、入れてください</b>（「この商品の完成品の pH と水分活性を教えてください」）
