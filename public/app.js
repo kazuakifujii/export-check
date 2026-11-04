@@ -280,7 +280,6 @@ const GLOSSARY = {
   "プロセスオーソリティ": "殺菌の条件が十分かを決める専門家・機関",
   "輸入警告": "米国FDAが、検査なしで止めてよいと決めた商品・会社の一覧",
   "Contains": "米国の英語ラベルで、アレルゲンをまとめて書く「含む：〜」の文",
-  "登録番号": "中国の税関に登録した工場の番号。包装に書く",
 };
 const GLOSS_RE = new RegExp(Object.keys(GLOSSARY).sort((a, b) => b.length - a.length).map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
 function explain(text) {
