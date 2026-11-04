@@ -167,7 +167,7 @@ function renderCountry(c) {
   const f = state.filter;
   const chip = (lv, word) =>
     `<button class="chip ${LEVEL_CLASS[lv]} ${f === lv ? "on" : ""} ${f && f !== lv ? "dim" : ""}" data-lv="${lv}" title="押すと、これだけを表示します" ${s[lv] ? "" : "disabled"}>${word} ${s[lv]}</button>`;
-  let html = `<div class="summary">
+  let html = outlook(c) + `<div class="summary">
     ${chip("出せない", "出荷できない条件")}${chip("直せば出せる", "直す所")}${chip("確認が必要", "確かめること")}
     <span class="sep"></span>${chip("輸出用に足す", "輸出用ラベルで足す所")}${chip("問題なし", "問題は見つかっていない")}${chip("対象外", "当てはまらない")}
     <span class="count">決まりノート ${c.noteRows}行のうち ${c.checkedRows}行を判定（判定日 ${esc(state.result.asOf)}）</span>
@@ -480,9 +480,28 @@ function renderAnnotated(c) {
   const call = (i) => `<div class="callout ${LEVEL_CLASS[i.level]}"><span class="badge ${LEVEL_CLASS[i.level]}">${esc(levelWord(i.level))}</span>
     <b>${explain(plainTitle(i.title))}</b>${i.todo || i.question ? `<div class="why">${explain(i.todo || i.question)}</div>` : ""}</div>`;
   const rows = lines.map((l, k) => `<div class="al-row ${at[k].length ? "has" : ""}"><div class="al-line">${esc(l)}</div>
-      <div class="al-arrow">${at[k].length ? "◀" : ""}</div><div class="al-calls">${at[k].map(call).join("")}</div></div>`).join("");
-  $("#countryBody").innerHTML = `<p class="hint">読み取ったラベルの行の横に、${esc(c.name)}で引っかかる所を書き込みました。くわしい理由と根拠は「チェック表で見る」で確かめられます。</p>
+      <div class="al-arrow">${at[k].length ? "◀" : ""}</div><div class="al-calls">${at[k].length ? at[k].map(call).join("") : `<span class="al-none">今回の確認では、追加の指摘はありません</span>`}</div></div>`).join("");
+  const photo = state.image ? `<details class="al-photo"><summary>元の写真と見比べる（読み取りが違っていたら、チェック表の「次に確かめること」で直せます）</summary><img src="data:${esc(state.mediaType)};base64,${state.image}" alt="ラベルの写真"></details>` : "";
+  $("#countryBody").innerHTML = outlook(c) + photo + `<p class="hint">読み取ったラベルの行の横に、${esc(c.name)}で引っかかる所を書き込みました。くわしい理由と根拠は「チェック表で見る」で確かめられます。</p>
     <div class="annot">${rows}
       ${missing.length ? `<div class="al-row has al-missing"><div class="al-line">（ラベルに書いていない所・工場や手続きの話）</div><div class="al-arrow">◀</div><div class="al-calls">${missing.map(call).join("")}</div></div>` : ""}
     </div>`;
+}
+
+// 一番上の「見立てと次の一歩」（議論の結論 11/4：主役は輸出の可能性と次の一歩。確率は出さない）
+function outlook(c) {
+  const name = esc(c.name);
+  const stops = c.items.filter((i) => i.level === "出せない");
+  const qs = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
+  let body;
+  if (stops.length) {
+    const s0 = stops[0];
+    body = `<p class="ol-main ol-stop">いまの仕様のままでは、${name}へは進めません。</p>
+      <p>進むには「${explain(plainTitle(s0.title))}」${stops.length > 1 ? `ほか${stops.length - 1}件` : ""}の条件を変える必要があります。${s0.todo ? explain(s0.todo) + "。" : ""}変えられるか、輸入者と相談しましょう。</p>`;
+  } else {
+    const q0 = qs[0];
+    body = `<p class="ol-main ol-go">${name}への輸出に向けて。今回確認した範囲では、輸出を妨げる条件は見つかっていません。</p>
+      ${q0 ? `<p><b>まず確かめること：</b>${explain(q0.question)}（${esc(whoGroup(q0.askWho, q0.todoKind))}へ）。結果によって、進められるか、何を変えるかが分かります。</p>` : ""}`;
+  }
+  return `<div class="outlook">${body}<p class="hint">この結果は輸出相談の準備用です。未確認の条件もあるため、出荷前に輸入者と最終確認してください。</p></div>`;
 }
