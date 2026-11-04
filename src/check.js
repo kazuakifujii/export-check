@@ -229,7 +229,14 @@ function ifStoppedList(items) {
 
 // 一番上の見立て（藤井さんの決定 11/4）：入口で無理／現実的に厳しい／回避策がある／進められる見込み
 export function verdictOf(items) {
-  const blocking = items.filter((i) => i.level === "出せない" || (i.hard && ["直せば出せる", "出せない"].includes(i.level)));
+  // 出荷できない条件と、「現実的に厳しい」印の行。加えて、この製品だから必要な要件・入口で、
+  // 手続きの負担が大きく回避策のある行（例：米国の低酸性食品→冷蔵で流通）も、見立ての対象にする
+  const blocking = items.filter(
+    (i) =>
+      i.level === "出せない" ||
+      (i.hard && ["直せば出せる", "出せない"].includes(i.level)) ||
+      (i.level === "直せば出せる" && i.workaround && ["交差", "入口"].includes(i.box)),
+  );
   if (!blocking.length) return { tier: "進められる見込み", items: [] };
   const noWay = blocking.filter((i) => !i.workaround);
   const entry = noWay.filter((i) => i.box === "入口");

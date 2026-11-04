@@ -107,3 +107,10 @@ test("見立て：入口で無理／現実的に厳しい／回避策がある�
   assert.equal(verdictOf([it({ level: "直せば出せる", hard: true, workaround: "冷蔵にする" })]).tier, "回避策がある");
   assert.equal(verdictOf([it({ level: "直せば出せる", hard: true })]).tier, "現実的に厳しい");
 });
+
+test("見立て：この製品だから必要な要件で回避策のある直す所は「回避策がある」", async () => {
+  const { verdictOf } = await import("../src/check.js");
+  const it = (o) => ({ rowId: "X", title: "t", reason: "", workaround: "", hard: false, box: "製品", level: "問題なし", ...o });
+  assert.equal(verdictOf([it({ level: "直せば出せる", box: "交差", workaround: "冷蔵で流通" })]).tier, "回避策がある");
+  assert.equal(verdictOf([it({ level: "直せば出せる", box: "製品", workaround: "表示を直す" })]).tier, "進められる見込み");
+});
