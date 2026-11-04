@@ -77,3 +77,14 @@ test("総当たり：答えが返らなかった行も、根拠の合わない�
   const p10 = us.items.find((i) => i.rowId === "US-P10");
   assert.ok(p10.upcoming.some((d) => d.date === "2027-01-15"), "赤色3号の施行日がこれから");
 });
+
+test("中国の入口：10都県とそれ以外が混ざれば「分からない」、住所が別の行でも拾う", () => {
+  const mixed = readLabelText("製造所\n工場A　静岡県御殿場市1\n工場B　群馬県伊勢崎市2");
+  const r = judgeChinaOrigin(mixed, {});
+  assert.equal(r.status, "分からない");
+  assert.ok(r.question.includes("群馬"));
+  const sep = readLabelText("【製造元】\n株式会社テスト（架空）\n群馬県テスト市1");
+  assert.equal(judgeChinaOrigin(sep, {}).status, "無い");
+  const kyoto = readLabelText("製造者：テスト（架空）　京都府京都市1");
+  assert.equal(judgeChinaOrigin(kyoto, {}), null); // 京都府は東京都ではない
+});

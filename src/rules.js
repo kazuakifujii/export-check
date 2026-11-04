@@ -15,46 +15,73 @@ function num(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+const ALL_PREFECTURES = [
+  "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県", "茨城県", "栃木県", "群馬県",
+  "埼玉県", "千葉県", "東京都", "神奈川県", "新潟県", "富山県", "石川県", "福井県", "山梨県", "長野県",
+  "岐阜県", "静岡県", "愛知県", "三重県", "滋賀県", "京都府", "大阪府", "兵庫県", "奈良県", "和歌山県",
+  "鳥取県", "島根県", "岡山県", "広島県", "山口県", "徳島県", "香川県", "愛媛県", "高知県", "福岡県",
+  "佐賀県", "長崎県", "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県",
+];
+const prefName = (p) => p.replace(/(都|府|県)$/, "");
+const isStopped = (p) => CN_STOPPED_PREFECTURES.includes(prefName(p));
+
+// ラベルの文字に出てくる都道府県（「長野県」「東京都」のように、県・都・府まで書いてあるもの）
+export function prefecturesInText(text) {
+  const found = [];
+  for (const p of ALL_PREFECTURES) if (text.includes(p)) found.push(p);
+  return found;
+}
+
 // 中国の入口：産地で止まるか（0-1）
+// ・ラベルに出てくる都道府県（製造者・製造所・販売者の住所、原料の産地）と、答えの「主な原料の産地」を集める
+// ・全部が止まっている10都県 → 無い（出せない）
+// ・10都県と、それ以外が混ざる → 分からない（どの工場・どの原料かを聞く）
+// ・答えで産地が分かり、どれも10都県でない → ある
 export function judgeChinaOrigin(label, answers) {
-  const prefRe = new RegExp(`(${CN_STOPPED_PREFECTURES.join("|")})(都|県)`);
   const answerOrigin = answers["主な原料の産地"] || answers["産地"] || "";
-  const maker = [fieldValue(label, "製造者"), fieldValue(label, "製造所")].join(" ");
-  const originField = fieldValue(label, "原料原産地");
+  const fromLabel = prefecturesInText(label.fullText);
+  const fromAnswer = CN_STOPPED_PREFECTURES.filter((p) => answerOrigin.includes(p)).map((p) => p + "（答え）");
+  const answerOk = answerOrigin && fromAnswer.length === 0;
 
-  const hits = [];
-  for (const pref of CN_STOPPED_PREFECTURES) {
-    if (answerOrigin.includes(pref)) hits.push({ pref, where: `答え「主な原料の産地：${answerOrigin}」` });
-  }
-  const mm = maker.match(prefRe);
-  if (mm) hits.push({ pref: mm[1], where: `ラベルの製造者の住所「${mm[0]}」` });
-  const om = originField.match(prefRe);
-  if (om) hits.push({ pref: om[1], where: `ラベルの原料原産地「${om[0]}」` });
+  const stoppedHits = [...fromLabel.filter(isStopped), ...fromAnswer];
+  const others = fromLabel.filter((p) => !isStopped(p));
 
-  if (hits.length > 0) {
-    const name = fieldValue(label, "名称");
-    const riceOnly = hits.every((h) => h.pref === "新潟") && /^(精米|玄米|米)$/.test(name.trim());
+  if (stoppedHits.length > 0) {
+    const name = label.fields.filter((f) => /名称|品名/.test(f.name)).map((f) => f.value).join(" ");
+    const riceOnly = stoppedHits.every((h) => h.startsWith("新潟")) && /^(精米|玄米|米)$/.test(name.trim());
     if (riceOnly) return null; // 新潟県産の米は産地証明で可（例外）。Claude の判定に任せる
+    if (others.length > 0 && fromAnswer.length === 0) {
+      return {
+        status: "分からない",
+        reason: `ラベルに、中国が輸入を止めている10都県（${stoppedHits.join("、")}）と、それ以外（${others.join("、")}）の両方が出てきます。この品がどこで作られ、原料がどこ産かで決まります。`,
+        evidence: "プログラムの判定表（10都県の一覧）",
+        label_quote: stoppedHits[0],
+        question: `この品を作った工場と主な原料は、${stoppedHits.join("・")}ですか、それ以外ですか`,
+        todo_kind: "なし",
+        todo: "",
+        decidedBy: "program",
+      };
+    }
     return {
       status: "無い",
-      reason: `中国が輸入を止めている10都県に当たります（${hits.map((h) => h.where).join("、")}）。`,
+      reason: `中国が輸入を止めている10都県に当たります（${stoppedHits.join("、")}）。産地を変えない限り、中国へは出せません。`,
       evidence: "プログラムの判定表（10都県の一覧）",
-      label_quote: mm ? mm[0] : om ? om[0] : "",
+      label_quote: fromLabel.find(isStopped) || "",
+      question: "",
       todo_kind: "なし",
       todo: "",
-      question: "",
       decidedBy: "program",
     };
   }
-  if (answerOrigin) {
+  if (answerOk) {
     return {
       status: "ある",
-      reason: `主な原料の産地（${answerOrigin}）は、止まっている10都県に当たりません。製造所の住所もラベルでは当たりません。`,
+      reason: `主な原料の産地（${answerOrigin}）は、止まっている10都県に当たりません。ラベルの住所にも10都県はありません。`,
       evidence: "プログラムの判定表（10都県の一覧）",
       label_quote: "",
+      question: "",
       todo_kind: "日本で取る書類",
       todo: "産地証明書を取る（0-2）",
-      question: "",
       decidedBy: "program",
     };
   }
