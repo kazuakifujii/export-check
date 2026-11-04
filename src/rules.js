@@ -203,19 +203,36 @@ export function usSpecialRules(label) {
   else if (/(牛|豚|鶏|ビーフ|チキン|ポーク|肉)エキス|チキンブイヨン|チキンコンソメ/.test(text)) out.push({ key: "肉エキス", text: "肉のエキスが入っています。量によっては米国農務省（USDA）の管轄になるので、量を確かめてください（US-X4）。" });
   if (/液卵|乾燥卵|冷凍卵|卵黄粉|卵白粉|全卵粉/.test(name)) out.push({ key: "卵", text: "液卵・乾燥卵・冷凍卵は、米国農務省（USDA）の卵製品の決まりに当たる見込みです（US-X4）。" });
   if (isJuiceDrink(name, ing)) out.push({ key: "ジュース", text: /粉末/.test(name) ? "果汁の飲み物の素です。ジュースのHACCP（US-X13）に当たるかを確かめてください。" : "果汁の飲み物には、ジュースのHACCP（US-X13）が当たります。野菜ジュースなどpHが4.6を超える物は、低酸性食品の決まりも重なります。" });
-  const top2 = (name + " " + firstItems(ing, 2)).replace(/果肉/g, "");
-  if (FISH_RE.test(top2.replace(/魚醤|魚肉ソーセージ/g, (m) => (m === "魚肉ソーセージ" ? "魚" : "")))) out.push({ key: "水産", text: "魚介が中心の食品は、作る工場に水産物のHACCP（US-F8）が当たる見込みです。缶詰の区分とは別にかかります。" });
+  const fish = fishKind(name, ing);
+  if (fish === "中心") out.push({ key: "水産", text: "魚介が中心の食品は、作る工場に水産物のHACCP（US-F8）が当たる見込みです。缶詰の区分とは別にかかります。" });
+  else if (fish === "原料") out.push({ key: "水産原料", text: "かつお節などの魚介の原料を使っています。その原料を作る工場に水産物のHACCP（US-F8）が当たり、輸入者が確かめます。" });
   if (/清酒|日本酒|焼酎|ビール|ワイン|リキュール|梅酒/.test(name)) out.push({ key: "酒", text: "お酒は、輸入者の輸入許可とラベルの承認（US-X14）が要ります。" });
   return out;
 }
 export function usCannedClass(label, answers = {}) {
-  const r = usCannedClassCore(label, answers);
+  let r = usCannedClassCore(label, answers);
   const special = usSpecialRules(label);
+  // 肉が中心なら、農務省の管轄が先。管轄が農務省なら、FDAの缶詰の区分は当たらない（決まりノート US-X1 の除外）
+  if (special.some((x) => x.key === "肉") && ["低酸性缶詰食品", "酸性化食品"].includes(r.cls))
+    r = { ...r, cls: "肉の量が先", sure: false, maybe: r.cls, why: `肉の量で、米国農務省（USDA）の管轄になるかが決まります。農務省の管轄なら、FDAの「${r.cls}」の区分は当たりません。` };
   return { ...r, special, also: special.map((x) => x.text) };
+}
+// 魚介の判定。短い語（さけ・いか・たら など）は、原材料の1項目そのものか決まった続き方の時だけ（さけるチーズ・いかり豆を拾わない）
+const FISH_LONG = /さば|鯖|いわし|鰯|さんま|秋刀魚|まぐろ|鮪|ツナ|シーチキン|かつお(?!節|ぶし|だし|エキス)|鮭|サーモン|ほたて|帆立|あさり|しじみ|牡蠣|しらす|ちりめん|いくら|たらこ|明太|うなぎ|鰻|魚肉|かに肉|白身魚|塩辛|(?<!て)いかの|さけの|鮭の/;
+const FISH_SHORT = /^(さけ|いか|たこ|えび|海老|かに|蟹|かき|ぶり|あじ|たら|貝)(水煮|缶|フレーク|フライ|塩辛|燻製|切り身|切身|$)/;
+const FISH_DERIVED = /(かつお|鰹|宗田|さば|鯖|いわし|煮干|魚|えび|かに|ほたて|貝|昆布)?(節|ぶし|だし|出汁|エキス|パウダー|粉末|調味料)|魚醤/;
+function fishKind(name, ing) {
+  const items = ing.split(/[、,／/]/).map((x) => x.replace(/[（(].*?[）)]/g, "").trim()).filter(Boolean);
+  const isFish = (x) => !FISH_DERIVED.test(x) && (FISH_LONG.test(x) || FISH_SHORT.test(x));
+  const nm = name.trim();
+  if ((FISH_LONG.test(nm) && !/せんべい|煎餅|スナック|チーズ/.test(nm)) || FISH_SHORT.test(nm)) return "中心";
+  if (items.slice(0, 2).some(isFish) && !/せんべい|煎餅|スナック/.test(nm)) return "中心";
+  if (items.some((x) => /(かつお|鰹|宗田|さば|鯖|いわし|煮干|魚介|えび|かに|ほたて)/.test(x) && /(節|ぶし|煮干|だし|出汁|エキス)/.test(x))) return "原料";
+  return "";
 }
 function isJuiceDrink(name, ingredients) {
   if (/グミ|ゼリー|菓子|キャンディ|アイス|ジャム|ポン酢|ぽん酢|たれ|ドレッシング|サイダー|ラムネ|スポーツ/.test(name)) return false;
-  if (/ジュース|ネクター|果汁飲料|果実飲料/.test(name)) return true;
+  if (/ジュース|ネクター|果汁飲料|果実飲料|果汁\s*$/.test(name.trim())) return true;
   const first = ingredients.split(/[、,]/)[0] || "";
   return /飲料|ドリンク/.test(name) && /果汁|ストレート|濃縮還元|ピューレ/.test(first) && !/ぶどう糖/.test(first);
 }
@@ -236,6 +253,8 @@ function usCannedClassCore(label, answers = {}) {
     return { ...base, cls: "対象外", sure: true, why: `水分活性 ${aw}（0.85以下）なので、低酸性・酸性化食品には当たりません。` };
   if (/非加熱/.test(sterilize + " " + name) || /いいえ/.test(sealedAns))
     return { ...base, cls: "対象外", sure: false, why: "密封して加熱殺菌する食品ではない見込みなので、低酸性・酸性化食品には当たりません。" };
+  if (/サイダー|ラムネ|炭酸|ソーダ|コーラ/.test(name))
+    return { ...base, cls: "対象外", sure: false, why: "炭酸飲料は、酸性化食品の決まりから外されています（21 CFR 114.3(b)）。" };
   if (EXCLUDED_RE.test(name))
     return { ...base, cls: "対象外", sure: false, why: "ジャム・ゼリー類は、酸性化食品の決まりから外されています（21 CFR 114.3(b)）。" };
   if (pH !== null && aw !== null && sealed) {

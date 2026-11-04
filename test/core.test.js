@@ -144,3 +144,12 @@ test("米国：冷蔵にしても肉・ジュースの決まりは消えない�
   assert.deepEqual(sp("名称：サイダー\n原材料名：ぶどう糖果糖液糖\n保存方法：常温"), []);
   assert.deepEqual(sp("名称：ツナ缶\n原材料名：まぐろ、植物油\n保存方法：常温\n殺菌方法：缶詰"), ["水産"]);
 });
+test("米国：水産の語の誤り、肉入りは肉の量が先", () => {
+  const sp = (t) => usCannedClass(rl2(t), {}).special.map((x) => x.key);
+  assert.deepEqual(sp("名称：さけるチーズ\n原材料名：生乳、食塩\n保存方法：要冷蔵"), []);
+  assert.deepEqual(sp("名称：いかり豆\n原材料名：そら豆、植物油\n保存方法：常温"), []);
+  assert.deepEqual(sp("名称：たらの芽の天ぷら\n原材料名：たらの芽、小麦粉\n保存方法：冷凍"), []);
+  assert.deepEqual(sp("名称：めんつゆ\n原材料名：しょうゆ、かつおだし、砂糖\n保存方法：常温"), ["水産原料"]);
+  const x = usCannedClass(rl2("名称：ビーフカレー\n原材料名：牛肉、たまねぎ\n保存方法：常温\n殺菌方法：レトルト"), { pH: "5.5", Aw: "0.95" });
+  assert.equal(x.cls, "肉の量が先");
+});

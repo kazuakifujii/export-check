@@ -575,7 +575,7 @@ function usClassBand(c) {
   const u = c.usClass;
   if (!u) return "";
   const lacf = u.cls === "低酸性缶詰食品", af = u.cls === "酸性化食品";
-  const tone = lacf || af ? "ol-way" : u.cls === "分からない" || (u.also || []).length ? "ol-hard" : "ol-go";
+  const tone = lacf || af ? "ol-way" : u.cls === "分からない" || u.cls === "肉の量が先" || (u.also || []).length ? "ol-hard" : "ol-go";
   // 言い方：数値で決まる物は「数値次第で」、条文で決まる物（冷蔵など）は言い切る（議論 11/4）
   const head = {
     低酸性缶詰食品: u.sure ? "米国の「低酸性缶詰食品」に当たります。" : "常温の密封・加熱殺菌品です。数値次第で、米国の「低酸性缶詰食品」に当たります。",
@@ -583,6 +583,7 @@ function usClassBand(c) {
     "冷蔵・冷凍": "冷蔵・冷凍なので、米国の缶詰の手続きには当たりません。",
     対象外: u.sure ? "米国の缶詰の手続きには当たりません。" : "米国の缶詰の手続きには、当たらない見込みです。",
     分からない: "米国の缶詰の手続きに当たるかは、工場に聞くと決まります。",
+    肉の量が先: "肉が入っています。まず肉の量を確かめます。",
     農務省の管轄の見込み: "米国では、農務省（USDA）の管轄になる見込みです。",
     ジュースのHACCP: "米国では、ジュースのHACCPが当たります。",
   }[u.cls] || u.cls;
@@ -590,9 +591,9 @@ function usClassBand(c) {
   const needs = US_CLASS_NEEDS[u.cls] || [];
   const row = c.items.find((i) => i.rowId === (af ? "US-X2" : "US-X1"));
   const ways = lacf || af ? shortWays(row?.workaround).map((w) => (/冷蔵/.test(w.head) ? { ...w, remain: [w.remain, "米国内の輸送・保管・店頭まで冷蔵を守れるか、輸入者に確かめるのが前提"].filter(Boolean).join("、") } : w)) : [];
-  const ask = !u.sure && u.cls !== "冷蔵・冷凍";
+  const ask = !u.sure && !["冷蔵・冷凍", "肉の量が先"].includes(u.cls);
   const inp = (key, label, ph) => `<label class="qf"><span>${label}</span><input data-q="${key}" placeholder="${ph}" value="${esc(state.extraAnswers[key] || "")}"></label>`;
-  return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p>${burden}
+  return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p>${burden}${u.cls === "肉の量が先" ? `<p>${explain(u.why)}</p>` : ""}
     ${ask ? `<p><b>工場に聞くこと：</b>${u.needSealedQuestion ? "密封して加熱殺菌しているか、" : ""}完成品の pH と水分活性。入れると、当たるかどうかが決まります。</p>` : ""}
     ${(u.also || []).length ? `<div class="way"><b>商品の種類で、ほかにも当たる決まり</b><ul>${u.also.map((a) => `<li>${explain(a)}</li>`).join("")}</ul></div>` : ""}
     ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
