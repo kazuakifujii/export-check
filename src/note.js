@@ -23,6 +23,13 @@ function countryFromHeading(text) {
 }
 
 // "### 1-A 施設の箱" のような見出しから箱を決める
+// 行番号の文字（F＝施設、X＝交差、P＝製品）を見出しより優先する。
+// 調査で行が別の見出しの下に足されても、箱を取り違えないため。
+function boxFromId(id) {
+  const m = id.match(/^(?:US|EU|CN)-([FXP])\d+$/);
+  return m ? { F: "施設", X: "交差", P: "製品" }[m[1]] : null;
+}
+
 function boxFromHeading(text) {
   if (/施設/.test(text)) return "施設";
   if (/交差/.test(text)) return "交差";
@@ -111,7 +118,7 @@ export function parseNote(markdown) {
     rows.push({
       id,
       country: rowCountry,
-      box: box || "製品",
+      box: boxFromId(id) || box || "製品",
       title,
       condition,
       exception,
