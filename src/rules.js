@@ -154,7 +154,7 @@ export function judgeEuEmphasis(label, answers = {}, claude = {}) {
   };
 }
 
-// 表示の言語の行：日本語の表示は対象国の言語で書かれているものとして判定する（藤井さんの決定 11/4）。
+// 表示の言語の行：日本語の表示は対象国の言語で書かれているものとして判定する（作者の決定 11/4）。
 // 翻訳した表示案はAIで作れるので、言葉の違いで「見落とし」として並べない。
 export function judgeLanguageAssumed() {
   return {
