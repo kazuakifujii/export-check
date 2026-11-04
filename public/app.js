@@ -153,6 +153,8 @@ function renderResult() {
       .join("")}</span>`;
   }
   document.querySelectorAll(".ctab").forEach((b) => b.addEventListener("click", () => { state.country = b.dataset.c; state.filter = null; renderResult(); }));
+  $("#countryTabs").innerHTML += `<button class="ghost opbtn" id="opOpen">社長に出す1枚</button>`;
+  $("#opOpen").addEventListener("click", openOnePager);
   document.querySelectorAll(".nextc").forEach((b) => b.addEventListener("click", () => run(false, b.dataset.c)));
   renderCountry(r.countries[state.country]);
 }
@@ -425,3 +427,33 @@ document.addEventListener("click", (e) => {
   }
   renderResult();
 }, true);
+
+// 社長に出す1枚：調べた国を横に並べ、結果をまとめるだけ（新しい判定はしない）
+function openOnePager() {
+  const r = state.result;
+  const cs = Object.keys(r.countries);
+  const list = (items, f) => items.length ? `<ul>${items.slice(0, 6).map(f).join("")}${items.length > 6 ? `<li class="hint">ほか ${items.length - 6}件</li>` : ""}</ul>` : `<p class="hint">なし</p>`;
+  const col = (code) => {
+    const c = r.countries[code];
+    const by = (lv) => c.items.filter((i) => i.level === lv);
+    const ask = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, code) - qPriority(y, code));
+    const docs = c.tomorrow["日本で取る書類"] || [];
+    return `<section class="op-col"><h3>${esc(c.name)}</h3>
+      <p class="op-count"><span class="g-stop">出荷できない条件 ${c.summary["出せない"]}</span>／<span class="g-fix">直す所 ${c.summary["直せば出せる"]}</span>／<span class="g-ask">確かめること ${c.summary["確認が必要"]}</span></p>
+      <h4>出荷できない条件</h4>${list(by("出せない"), (i) => `<li>${esc(plainTitle(i.title))}<br><small>${esc(i.todo || i.reason)}</small></li>`)}
+      <h4>直す所（表示・登録・証明書）</h4>${list(by("直せば出せる"), (i) => `<li>${esc(plainTitle(i.title))}${i.todo ? `<br><small>${esc(i.todo)}</small>` : ""}</li>`)}
+      <h4>日本で取る書類・登録</h4>${list(docs, (t) => `<li>${esc(t.text)}</li>`)}
+      <h4>まだ決まっていないこと（誰に聞くか）</h4>${list(ask, (i) => `<li>${esc(i.question)}<br><small>${esc(whoGroup(i.askWho, i.todoKind))}に聞く</small></li>`)}
+      <p class="hint">輸出用ラベルで足す所 ${c.summary["輸出用に足す"]}件は、ラベルを作るときにまとめて入れます。</p>
+    </section>`;
+  };
+  const concern = state.lastConcern ? `<p><b>気になっていること：</b>${esc(state.lastConcern)}</p>` : "";
+  $("#opBody").innerHTML = `<header class="op-head"><h2>輸出の検討メモ：${esc((state.label?.fields || []).find((f) => /名称|品名/.test(f.name))?.value || "この商品")}</h2>
+      <p>判定日 ${esc(r.asOf)}／調べた国：${cs.map((c) => esc(r.countries[c].name)).join("・")}</p>
+      <p><b>今回お願いしたいこと：</b>下の「まだ決まっていないこと」を担当に確かめ、「直す所」の見積もりを取ること。そのうえで、どの国から相談を始めるかを決めます。</p>${concern}</header>
+    <div class="op-grid" style="grid-template-columns: repeat(${cs.length}, 1fr)">${cs.map(col).join("")}</div>
+    <p class="hint">${cs.length < 3 ? "ほかの国も調べると、ここに並びます。" : ""}この1枚は相談の準備用です。輸入許可や通関を保証するものではありません。費用や日数は、輸入者や専門家の見積もりで確かめてください。</p>`;
+  $("#onePager").hidden = false;
+}
+$("#opClose").addEventListener("click", () => ($("#onePager").hidden = true));
+$("#opPrint").addEventListener("click", () => window.print());
