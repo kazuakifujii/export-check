@@ -154,7 +154,25 @@ export function judgeEuEmphasis(label, answers = {}, claude = {}) {
   };
 }
 
+// 表示の言語の行：日本語の表示は対象国の言語で書かれているものとして判定する（藤井さんの決定 11/4）。
+// 翻訳した表示案はAIで作れるので、言葉の違いで「見落とし」として並べない。
+export function judgeLanguageAssumed() {
+  return {
+    status: "ある",
+    reason: "日本語の表示は、この国の言葉で書かれているものとして判定しています。翻訳した表示は、輸出用のラベルを作るときに作れます（表示案はAIで作れます）。",
+    label_quote: "",
+    absent_on_label: false,
+    question: "",
+    todo_kind: "なし",
+    todo: "",
+    decidedBy: "program",
+  };
+}
+
 export const PROGRAM_RULES = {
+  "US-P7": judgeLanguageAssumed,
+  "EU-P1": judgeLanguageAssumed,
+  "CN-P1": judgeLanguageAssumed,
   "EU-P2": judgeEuEmphasis,
   "0-1": judgeChinaOrigin,
   "US-X1": judgeUsLacf,

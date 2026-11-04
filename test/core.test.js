@@ -71,9 +71,9 @@ test("総当たり：答えが返らなかった行も、根拠の合わない�
   const p4 = us.items.find((i) => i.rowId === "US-P4");
   assert.equal(p4.status, "分からない");
   assert.ok(p4.downgraded);
-  const p7 = us.items.find((i) => i.rowId === "US-P7");
-  assert.equal(p7.status, "分からない");
-  assert.ok(p7.flags[0].startsWith("AIが答えなかった"));
+  const p5 = us.items.find((i) => i.rowId === "US-P5");
+  assert.equal(p5.status, "分からない");
+  assert.ok(p5.flags[0].startsWith("AIが答えなかった"));
   const p10 = us.items.find((i) => i.rowId === "US-P10");
   assert.ok(p10.upcoming.some((d) => d.date === "2027-01-15"), "赤色3号の施行日がこれから");
 });
