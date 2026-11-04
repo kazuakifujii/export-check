@@ -114,3 +114,17 @@ test("見立て：この製品だから必要な要件で回避策のある直�
   assert.equal(verdictOf([it({ level: "直せば出せる", box: "交差", workaround: "冷蔵で流通" })]).tier, "回避策がある");
   assert.equal(verdictOf([it({ level: "直せば出せる", box: "製品", workaround: "表示を直す" })]).tier, "進められる見込み");
 });
+
+import { usCannedClass } from "../src/rules.js";
+import { readLabelText as rl2 } from "../src/read-label.js";
+test("米国の缶詰・レトルトの区分", () => {
+  const L = rl2("名称：炊き込みごはんの素\n原材料名：とうもろこし、しょうゆ\n保存方法：常温で保存\n殺菌方法：気密性容器に密封し、加圧加熱殺菌");
+  assert.equal(usCannedClass(L, {}).cls, "低酸性缶詰食品");
+  assert.equal(usCannedClass(L, {}).sure, false);
+  assert.equal(usCannedClass(L, { pH: "5.8", Aw: "0.97" }).sure, true);
+  assert.equal(usCannedClass(L, { pH: "4.2", Aw: "0.97" }).cls, "対象外");
+  assert.equal(usCannedClass(L, { 保存: "ずっと冷蔵" }).cls, "冷蔵・冷凍");
+  assert.equal(usCannedClass(L, { pH: "5.8", Aw: "0.80" }).cls, "対象外");
+  const A = rl2("名称：甘酢漬け\n原材料名：しょうが、醸造酢、砂糖\n保存方法：常温\n殺菌方法：密封後加熱殺菌");
+  assert.equal(usCannedClass(A, {}).cls, "酸性化食品");
+});

@@ -7,7 +7,7 @@
 
 import { askJson } from "./claude.js";
 import { loadNote, rowsForCountry, rowToText, COUNTRIES } from "./note.js";
-import { PROGRAM_RULES } from "./rules.js";
+import { PROGRAM_RULES, usCannedClass } from "./rules.js";
 import { verifyJudgement } from "./verify.js";
 
 export const STATUSES = ["ある", "無い", "対象外", "分からない"];
@@ -204,7 +204,8 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
       items,
       summary: summarize(items),
       tomorrow: tomorrowList(items),
-      verdict: verdictOf(items),
+      usClass: c === "US" ? usCannedClass(label, answers) : null,
+      verdict: verdictOf(items, c === "US" ? usCannedClass(label, answers) : null),
       ifStopped: ifStoppedList(items),
       checkedRows: items.length,
       noteRows: rows.length,
@@ -241,14 +242,16 @@ function ifStoppedList(items) {
 }
 
 // 一番上の見立て（藤井さんの決定 11/4）：入口で無理／現実的に厳しい／回避策がある／進められる見込み
-export function verdictOf(items) {
+export function verdictOf(items, usClass = null) {
   // 出荷できない条件と、「現実的に厳しい」印の行。加えて、この製品だから必要な要件・入口で、
   // 手続きの負担が大きく回避策のある行（例：米国の低酸性食品→冷蔵で流通）も、見立ての対象にする
   const blocking = items.filter(
     (i) =>
       i.level === "出せない" ||
       (i.hard && ["直せば出せる", "出せない"].includes(i.level)) ||
-      (i.level === "直せば出せる" && i.workaround && ["交差", "入口"].includes(i.box)),
+      (i.level === "直せば出せる" && i.workaround && ["交差", "入口"].includes(i.box)) ||
+      // 米国の缶詰・レトルトの区分が低酸性・酸性化食品（見込みを含む）なら、見立てに必ず出す（見せ場）
+      (usClass && i.level !== "対象外" && ((usClass.cls === "低酸性缶詰食品" && i.rowId === "US-X1") || (usClass.cls === "酸性化食品" && i.rowId === "US-X2"))),
   );
   if (!blocking.length) return { tier: "進められる見込み", items: [] };
   const noWay = blocking.filter((i) => !i.workaround);

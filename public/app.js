@@ -305,11 +305,21 @@ function renderCountry(c) {
     window.open("https://claude.ai/new", "_blank", "noopener");
   });
   const rerun = $("#rerun");
-  if (rerun) rerun.addEventListener("click", () => {
-    document.querySelectorAll("[data-q]").forEach((el) => {
+  document.querySelectorAll(".rerun2").forEach((b) => b.addEventListener("click", () => {
+    b.closest(".usask").querySelectorAll("[data-q]").forEach((el) => {
       if (el.value.trim()) state.extraAnswers[el.dataset.q] = el.value.trim();
-      else delete state.extraAnswers[el.dataset.q];
     });
+    run(false, state.country);
+  }));
+  if (rerun) rerun.addEventListener("click", () => {
+    // 同じ項目（pHなど）が上の帯と下の欄の両方にあるので、どちらかに入っていれば使う
+    const vals = {};
+    document.querySelectorAll("[data-q]").forEach((el) => {
+      const v = el.value.trim();
+      if (v) vals[el.dataset.q] = v;
+      else if (!(el.dataset.q in vals)) vals[el.dataset.q] = "";
+    });
+    for (const [k, v] of Object.entries(vals)) { if (v) state.extraAnswers[k] = v; else delete state.extraAnswers[k]; }
     run(false, state.country);
   });
 }
@@ -556,6 +566,31 @@ function renderAnnotated() {
   document.querySelectorAll(".nextc2").forEach((b) => b.addEventListener("click", () => run(false, b.dataset.c)));
 }
 
+// 米国の缶詰・瓶詰・レトルトの区分（見せ場）。乾物以外は必ずどれかを出し、数値が無ければその場で聞く
+const US_CLASS_NEEDS = {
+  低酸性缶詰食品: ["工場の登録（FCE）", "製品ごとの殺菌条件の届け出（SID）。条件は殺菌の専門家が決める", "工場に、FDAの講習（Better Process Control School）を受けた責任者を置く"],
+  酸性化食品: ["工場の登録（FCE）", "製品ごとの工程の届け出（SID）。pHの管理と記録", "工場に、FDAの講習（Better Process Control School）を受けた責任者を置く"],
+};
+function usClassBand(c) {
+  const u = c.usClass;
+  if (!u) return "";
+  const lacf = u.cls === "低酸性缶詰食品", af = u.cls === "酸性化食品";
+  const tone = lacf || af ? "ol-way" : u.cls === "分からない" ? "ol-hard" : "ol-go";
+  const head = lacf || af ? `米国では「${u.cls}」に${u.sure ? "当たります" : "当たる見込みです"}` : u.cls === "分からない" ? "米国の缶詰・レトルトの区分は、まだ決まっていません" : `米国の缶詰・レトルトの区分：${u.cls}${u.sure ? "" : "（見込み）"}`;
+  const needs = (US_CLASS_NEEDS[u.cls] || []);
+  const row = c.items.find((i) => i.rowId === (af ? "US-X2" : "US-X1"));
+  const ways = lacf || af ? shortWays(row?.workaround) : [];
+  const ask = !u.sure && u.cls !== "冷蔵・冷凍";
+  const inp = (key, label, ph) => `<label class="qf"><span>${label}</span><input data-q="${key}" placeholder="${ph}" value="${esc(state.extraAnswers[key] || "")}"></label>`;
+  return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p><p>${explain(u.why)}</p>
+    ${needs.length ? `<div class="way"><b>当たると要るもの</b><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul></div>` : ""}
+    ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
+    ${ask ? `<div class="usask"><b>品質管理の担当に聞いて、入れてください</b>（「この商品の完成品の pH と水分活性を教えてください」）
+      <div class="qin">${inp("pH", "pH", "例：5.8")}${inp("Aw", "水分活性", "例：0.97")}<label class="qf"><span>工場から店までの温度</span><select data-q="保存"><option value=""></option>${["ずっと冷蔵", "途中で常温に置く時間がある", "常温"].map((o) => `<option ${state.extraAnswers["保存"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label></div>
+      <button class="primary rerun2">入れて、もう一度チェック</button></div>` : ""}
+  </div>`;
+}
+
 // 一番上の「見立てと次の一歩」（議論の結論 11/4：主役は輸出の可能性と次の一歩。確率は出さない）
 // 回避策の短い形：①②③ごとに「一言」と【残る：〜】。かっこの中（くわしい説明）は開いたら見える
 function shortWays(w) {
@@ -591,7 +626,7 @@ function outlook(c) {
       ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
       <details class="more"><summary>くわしく</summary>${x.reason ? `<p>${explain(x.reason)}</p>` : ""}${x.workaround ? `<p>${explain(x.workaround)}</p>` : ""}</details></li>`;
   };
-  return `<div class="outlook ${MSG[0]}"><span class="tier">${esc(v.tier)}</span>
+  return usClassBand(c) + `<div class="outlook ${MSG[0]}"><span class="tier">${esc(v.tier)}</span>
     <p class="ol-main">${MSG[1]}</p>${MSG[2] ? `<p>${MSG[2]}</p>` : ""}
     ${v.items.length ? `<ul class="ol-list">${v.items.map(li).join("")}</ul>` : ""}
     ${v.tier === "進められる見込み" && beyond.length ? `<p class="beyond"><b>ただし、ラベル以外にも残っています：</b>${beyond.map((i) => explain(plainTitle(i.title))).join("、")}${beyondMore}</p>` : ""}

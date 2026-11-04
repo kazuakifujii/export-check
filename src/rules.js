@@ -177,3 +177,41 @@ export const PROGRAM_RULES = {
   "0-1": judgeChinaOrigin,
   "US-X1": judgeUsLacf,
 };
+
+// 米国の「缶詰・瓶詰・レトルトの区分」（見せ場。藤井さん 11/4）
+// 乾物以外は、低酸性缶詰食品（LACF）／酸性化食品（AF）／冷蔵・冷凍／対象外 のどれかを必ず出す。
+// 数値（pH・水分活性）が無い時は「見込み」とし、聞き返す。根拠：21 CFR 113.3・114.3、FDA「LACF/AF Precursor Questions」問1・3・5。
+const ACID_RE = /醸造酢|米酢|穀物酢|りんご酢|黒酢|果実酢|酢|クエン酸|酸味料|乳酸|リンゴ酸|酢酸|ｐＨ調整剤|pH調整剤/;
+const SEALED_RE = /加圧加熱|レトルト|気密性容器|密封|缶|瓶|びん|殺菌/;
+const DRY_RE = /乾燥|乾物|粉末|顆粒|ふりかけ|焙煎|フリーズドライ|スナック|せんべい|クッキー|あめ|飴/;
+export function usCannedClass(label, answers = {}) {
+  const storage = [answers["保存"] || "", fieldValue(label, "保存方法")].join(" ");
+  const sterilize = [answers["殺菌"] || "", fieldValue(label, "殺菌方法"), answers["容器"] || ""].join(" ");
+  const name = [fieldValue(label, "名称"), fieldValue(label, "品名"), fieldValue(label, "種類別")].join(" ");
+  const ingredients = fieldValue(label, "原材料名") || (label.lines || []).join(" ");
+  const pH = num(answers["pH"]);
+  const aw = num(answers["Aw"] ?? answers["水分活性"]);
+  const acid = ACID_RE.test(ingredients);
+  const base = { pH, aw, acidInIngredients: acid };
+  if (/ずっと冷蔵/.test(answers["保存"] || "") || /冷凍/.test(storage) || (/冷蔵|要冷|10℃以下|10°C以下/.test(storage) && !/常温/.test(answers["保存"] || "")))
+    return { ...base, cls: "冷蔵・冷凍", sure: true, why: "冷蔵・冷凍で保管・流通・販売する食品は、低酸性・酸性化食品の手続きの対象外です。ただし、店まで本当に冷蔵であることが条件です。" };
+  if (aw !== null && aw <= 0.85)
+    return { ...base, cls: "対象外", sure: true, why: `水分活性 ${aw}（0.85以下）なので、低酸性・酸性化食品には当たりません。` };
+  if (pH !== null && aw !== null) {
+    if (pH > 4.6) return { ...base, cls: "低酸性缶詰食品", sure: SEALED_RE.test(sterilize), why: `pH ${pH}（4.6超）・水分活性 ${aw}（0.85超）の常温の密封・加熱殺菌品です。` };
+    if (acid || /酸を加え|加えた|はい/.test(answers["酸を加えたか"] || ""))
+      return { ...base, cls: "酸性化食品", sure: true, why: `pH ${pH}（4.6以下）ですが、酢などの酸を加えて下げているので、酸性化食品です。` };
+    return { ...base, cls: "対象外", sure: false, why: `pH ${pH}（4.6以下）。酸を加えずにもともと酸性なら対象外です（酸を加えていれば酸性化食品）。` };
+  }
+  if (/^\s*(醸造酢|米酢|穀物酢|りんご酢|黒酢|果実酢|酢)/.test(ingredients))
+    return { ...base, cls: "対象外", sure: false, why: "主な原料が酢なので、もともと酸性の食品（酸性食品）の見込みです。pHが4.6以下なら対象外です。" };
+  if (DRY_RE.test(name + " " + storage) && !SEALED_RE.test(sterilize))
+    return { ...base, cls: "対象外", sure: false, why: "乾燥した食品の見込みです。水分活性が0.85以下なら対象外です。" };
+  if (SEALED_RE.test(sterilize) || /常温/.test(storage)) {
+    const cls = acid ? "酸性化食品" : "低酸性缶詰食品";
+    return { ...base, cls, sure: false, why: acid
+      ? "常温で売る密封・加熱殺菌品で、原材料に酢などの酸があります。pHと水分活性で決まります。"
+      : "常温で売る密封・加熱殺菌品です。pHと水分活性で決まります。" };
+  }
+  return { ...base, cls: "分からない", sure: false, why: "殺菌の方法と保存の温度が分かると、区分が決まります。" };
+}
