@@ -43,7 +43,7 @@ $("#sample").addEventListener("click", () => {
   $("#preview").hidden = true;
   $("#labelText").value = window.SAMPLES.corn.text;
   state.labelDirty = true;
-  setStatus("サンプル（架空の「とうもろこしごはんの素」）のラベルを入れました。調べたい国のボタンを押してみてください。");
+  setStatus("サンプル（架空の「とうもろこしごはんの素」）のラベルを入れました。調べたい国のボタンを押してください。");
 });
 
 function collectAnswers() {
@@ -165,8 +165,8 @@ function emptyBox(c, key, naCount) {
   const boxItems = c.items.filter((i) => i.box === key);
   const unjudged = boxItems.some((i) => (i.flags || []).some((f) => f.startsWith("AIが答えなかった")));
   if (c.stoppedAtEntry || c.verdict?.tier === "入口で無理") return `<p class="hint">入口の条件に当たったため、ここから先のくわしい確認はしていません。</p>`;
-  if (unjudged || !boxItems.length) return `<p class="hint">この区分は、まだ判定がそろっていません。お手数ですが、もう一度チェックしてみてください。</p>`;
-  return `<p class="none-box">今回の確認では、特に指摘はありません。まだ確かめていない条件は、輸入者と一緒に確かめましょう。${naCount ? `（当てはまらない項目 ${naCount}件は、下にまとめています）` : ""}</p>`;
+  if (unjudged || !boxItems.length) return `<p class="hint">この区分は、まだ判定がそろっていません。お手数ですが、もう一度チェックしてください。</p>`;
+  return `<p class="none-box">今回の確認では、特に指摘はありません。まだ確かめていない条件は、輸入者とご確認ください。${naCount ? `（当てはまらない項目 ${naCount}件は、下にまとめています）` : ""}</p>`;
 }
 
 const boxLabel = (key) => (BOX_ORDER.find((b) => b[0] === key) || [key, key])[1];
@@ -184,10 +184,10 @@ function renderCountry(c) {
     <span class="count">決まりノート ${c.noteRows}行のうち ${c.checkedRows}行を判定（判定日 ${esc(state.result.asOf)}）</span>
   </div>
   <div class="guide">
-    ${s["出せない"] ? `<p><b class="g-stop">出荷できない条件があります（${s["出せない"]}）</b>　理由と、進むための条件を一緒に見ていきましょう。</p>` : ""}
+    ${s["出せない"] ? `<p><b class="g-stop">出荷できない条件があります（${s["出せない"]}）</b>　理由と、進むための条件をご確認ください。</p>` : ""}
     ${s["直せば出せる"] ? `<p><b class="g-fix">直す所があります（${s["直せば出せる"]}）</b>　表示の修正や、登録・証明書の準備です。直したあとで、もう一度確かめられます。</p>` : ""}
     ${s["確認が必要"] ? `<p><b class="g-ask">確かめること（${s["確認が必要"]}）</b>　どなたに聞けばよいかも、あわせてご案内します。</p>` : ""}
-    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが片づくまでは出荷を待ち、輸入者と確かめましょう。</p>` : `<p class="hint">決まりノートで見た範囲では、引っかかるところは見つかっていません。出荷の前には、輸入者や窓口と一緒に確かめましょう。</p>`}
+    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが片づくまでは出荷を待ち、輸入者と確かめましょう。</p>` : `<p class="hint">決まりノートで見た範囲では、引っかかるところは見つかっていません。出荷の前に、輸入者や窓口とご確認ください。</p>`}
   </div>`;
 
   if (c.stoppedAtEntry) {
@@ -216,7 +216,7 @@ function renderCountry(c) {
       <h3>${name}<small>${sub}</small></h3>
       ${shown.map(card).join("") || emptyBox(c, key, na.length)}
       ${add.length ? `<details class="addon"><summary>＋α 輸出用ラベルで足す所（${add.length}）</summary>
-        <p class="hint">日本のラベルに無くて当然のものです。輸出用のラベルを作るときに入れましょう。</p>${add.map(card).join("")}</details>` : ""}
+        <p class="hint">日本のラベルに無くて当然のものです。輸出用のラベルを作る際に加えてください。</p>${add.map(card).join("")}</details>` : ""}
     </section>`;
   }
   html += `</div>`;
@@ -251,13 +251,13 @@ function renderCountry(c) {
     });
     const order = state.qView === "box" ? BOX_ORDER.map((b) => boxLabel(b[0])) : [...WHO_GROUPS.map((g) => g[0]), "そのほか"];
     const rowsHtml = order.filter((w) => groups.has(w)).map((w) =>
-      `<details class="qgroup"><summary>${esc(w)}${state.qView === "box" ? "" : "に聞いてみましょう"}（${groups.get(w).length}件）</summary>${groups.get(w).join("")}</details>`).join("");
+      `<details class="qgroup"><summary>${esc(w)}${state.qView === "box" ? "" : "に確認"}（${groups.get(w).length}件）</summary>${groups.get(w).join("")}</details>`).join("");
     const firstHtml = firstThree.join("");
     const decided = c.items.length - qs.length;
     const rest = qs.length - firstThree.length;
     html += `<section class="questions"><h3>まずは、ここから確かめましょう</h3>
-      <p class="progress">最初は、この${firstThree.length}件だけで大丈夫です${rest > 0 ? `（ほかに${rest}件あります）` : ""}。</p>
-      <p class="hint">分かるところから、入れてみてください。</p>
+      <p class="progress">まずはこの${firstThree.length}件を確かめると、判定が大きく進みます${rest > 0 ? `（ほかに${rest}件あります）` : ""}。</p>
+      <p class="hint">分かるところからご入力ください。</p>
       ${firstHtml}
       ${rest > 0 ? `<div class="qsw"><span class="hint">ほかの${rest}件の見方：</span><button class="ghost ${state.qView !== "box" ? "on" : ""}" data-qv="who">聞く相手ごと</button><button class="ghost ${state.qView === "box" ? "on" : ""}" data-qv="box">要件の区分ごと</button></div>` : ""}
       ${rowsHtml}
@@ -280,8 +280,8 @@ function renderCountry(c) {
       <p class="hint">輸出できるかどうかを決める話ではありません。輸出を決めてから、輸入者や通関業者と一緒に進めるものです。このほかにも手続きがあります。</p><ul>${setup
       .map((i) => `<li><b>${explain(plainTitle(i.title))}</b>${i.rowId === "US-F2" ? "（期限が切れると出荷が止まるので、ご注意ください）" : ""}：${explain(i.todo || i.question || i.reason)} <span class="rid">${esc(i.rowId)}</span></li>`)
       .join("")}</ul>
-      <div class="handoff"><b>この続きは、Claude（AIの相談相手）にお手伝いを頼めます。</b>段取りの順番表、${c.name === "中国" ? "中国語" : "英語"}ラベルの案、輸入者へのメールの下書きを作れます。
-        <div><button class="primary" id="handoff">Claudeに相談する</button> <span id="handoffMsg" class="hint">押すと相談文がコピーされ、Claudeが開きます。そのまま貼り付けて送ってみてください。</span></div>
+      <div class="handoff"><b>この先の準備は、Claude（AIの相談相手）に依頼できます。</b>段取りの順番表、${c.name === "中国" ? "中国語" : "英語"}ラベルの案、輸入者へのメールの下書きを作れます。
+        <div><button class="primary" id="handoff">Claudeに相談する</button> <span id="handoffMsg" class="hint">押すと相談文がコピーされ、Claudeが開きます。そのまま貼り付けて送信してください。</span></div>
         <details class="hpre"><summary>相談文を見る</summary><pre>${esc(handoffText(c))}</pre></details></div></details>`;
   }
   html += `</section>`;
@@ -289,7 +289,7 @@ function renderCountry(c) {
   const concern = state.lastConcern;
   if (concern) {
     html += `<section class="questions"><h3>お書きいただいた「気になること」</h3><p>${esc(concern)}</p>
-      <p class="hint">決まりノートの行に関係する所は、その行の判定の理由に書いています。ノートに無いことはこの道具では判定できないので、窓口（JETRO など）に相談してみてください。</p></section>`;
+      <p class="hint">決まりノートの行に関係する所は、その行の判定の理由に書いています。ノートに無いことはこの道具では判定できないので、窓口（JETRO など）にご相談ください。</p></section>`;
   }
   // 当てはまらない決まりは、全部見た証拠として一番下に畳んで置く
   const naAll = c.items.filter((i) => i.level === "対象外");
@@ -306,8 +306,8 @@ function renderCountry(c) {
   const ho = $("#handoff");
   if (ho) ho.addEventListener("click", async () => {
     const text = handoffText(c);
-    try { await navigator.clipboard.writeText(text); $("#handoffMsg").textContent = "コピーしました。開いたClaudeに貼り付けて送ってみてください。"; }
-    catch { $("#handoffMsg").textContent = "うまくコピーできませんでした。「相談文を見る」から選んでコピーしてみてください。"; }
+    try { await navigator.clipboard.writeText(text); $("#handoffMsg").textContent = "コピーしました。開いたClaudeに貼り付けて送信してください。"; }
+    catch { $("#handoffMsg").textContent = "うまくコピーできませんでした。「相談文を見る」から選択してコピーしてください。"; }
     window.open("https://claude.ai/new", "_blank", "noopener");
   });
   const rerun = $("#rerun");
@@ -604,11 +604,11 @@ function usClassBand(c) {
   const ask = !u.sure && !["冷蔵・冷凍", "肉の量が先"].includes(u.cls);
   const inp = (key, label, ph) => `<label class="qf"><span>${label}</span><input data-q="${key}" placeholder="${ph}" value="${esc(state.extraAnswers[key] || "")}"></label>`;
   return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p>${burden}${u.cls === "肉の量が先" ? `<p>${explain(u.why)}</p>` : ""}
-    ${ask ? `<p><b>工場に確かめたいこと：</b>${u.needSealedQuestion ? "密封して加熱殺菌しているか、" : ""}完成品の pH と水分活性。入れていただくと、当たるかどうかが分かります。</p>` : ""}
+    ${ask ? `<p><b>工場に確かめたいこと：</b>${u.needSealedQuestion ? "密封して加熱殺菌しているか、" : ""}完成品の pH と水分活性。ご入力いただくと、当たるかどうかが分かります。</p>` : ""}
     ${(u.also || []).length ? `<div class="way"><b>商品の種類で、ほかにも当たる決まり</b><ul>${u.also.map((a) => `<li>${explain(a)}</li>`).join("")}</ul></div>` : ""}
     ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
     <details class="more"><summary>くわしく</summary><p>${explain(u.why)}</p>${needs.length ? `<p><b>当たる場合に必要なもの</b></p><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul>` : ""}</details>
-    ${ask ? `<div class="usask"><b>品質管理のご担当に聞いて、入れてみてください</b>（「この商品の完成品の pH と水分活性を教えてください」）
+    ${ask ? `<div class="usask"><b>品質管理のご担当に確認のうえ、ご入力ください</b>（「この商品の完成品の pH と水分活性を教えてください」）
       <div class="qin">${u.needSealedQuestion ? `<label class="qf"><span>密封して加熱殺菌していますか</span><select data-q="密封・加熱殺菌"><option value=""></option>${["はい", "いいえ"].map((o) => `<option ${state.extraAnswers["密封・加熱殺菌"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label>` : ""}${inp("pH", "pH", "例：5.8")}${inp("Aw", "水分活性", "例：0.97")}<label class="qf"><span>工場から店までの温度</span><select data-q="保存"><option value=""></option>${["ずっと冷蔵", "途中で常温に置く時間がある", "常温"].map((o) => `<option ${state.extraAnswers["保存"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label></div>
       <button class="primary rerun2">入れた内容で、もう一度チェックする</button></div>` : ""}
   </div>`;
@@ -618,7 +618,7 @@ function usClassBand(c) {
 function euBand(c) {
   const e = c.euAnimal;
   if (!e) return "";
-  if (!e.found.length) return `<div class="outlook usclass ol-hard"><span class="tier">EU：動物由来の原料</span><p class="ol-main">ラベルからは、動物由来の原料を拾えませんでした。</p><p>エキスや調味料の中身に入っていることがあります。「動物由来の原料は入っていますか」と、仕入先に確かめてみてください。</p></div>`;
+  if (!e.found.length) return `<div class="outlook usclass ol-hard"><span class="tier">EU：動物由来の原料</span><p class="ol-main">ラベルからは、動物由来の原料を拾えませんでした。</p><p>エキスや調味料の中身に入っていることがあります。「動物由来の原料は入っていますか」と、仕入先にご確認ください。</p></div>`;
   const row = c.items.find((i) => i.rowId === "EU-X1");
   const ways = shortWays(row?.workaround);
   return `<div class="outlook usclass ol-way"><span class="tier">EU：動物由来の原料</span>
@@ -689,5 +689,5 @@ function outlook(c) {
     ${v.items.length ? `<ul class="ol-list">${v.items.map(li).join("")}</ul>` : ""}
     ${v.tier === "進められる見込み" && beyond.length ? `<p class="beyond"><b>ただし、ラベルのほかにも確かめたいことがあります：</b>${beyond.map((i) => explain(plainTitle(i.title))).join("、")}${beyondMore}</p>` : ""}
     ${q0 ? `<p><b>最初に確かめたいこと：</b>${explain(q0.question)}（${esc(whoGroup(q0.askWho, q0.todoKind))}へ）</p>` : ""}
-    <p class="hint">相談の準備にお使いください。出荷の前には、輸入者と一緒に確かめましょう。</p></div>`;
+    <p class="hint">輸出相談の準備にお使いください。出荷の前に、輸入者とご確認ください。</p></div>`;
 }
