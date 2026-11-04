@@ -184,7 +184,7 @@ export const PROGRAM_RULES = {
 // 酸は酢・クエン酸・酸味料などに絞る（乳酸カルシウム・pH調整剤は酸を加えたことにならない場合が多いので外す）
 const ACID_RE = /醸造酢|米酢|穀物酢|りんご酢|黒酢|果実酢|ワインビネガー|酢(?!酸)|クエン酸(?!\s*(Ca|カルシウム|鉄|Na|ナトリウム))|酸味料|酢酸(?!\s*(Na|ナトリウム))|リンゴ酸|乳酸(?!\s*(Ca|カルシウム|菌|Na|ナトリウム))/;
 const SEALED_RE = /加圧加熱|レトルト|気密性容器|密封|缶詰|びん詰|瓶詰|殺菌/;
-const DRY_RE = /乾燥|乾物|粉末|顆粒|ふりかけ|焙煎|フリーズドライ|スナック|せんべい|煎餅|あられ|クッキー|ビスケット|あめ|飴|削りぶし|削り節|かつお節|鰹節|節$/;
+const DRY_RE = /乾燥|乾物|粉末|顆粒|ふりかけ|焙煎|フリーズドライ|スナック|せんべい|煎餅|あられ|クッキー|ビスケット|あめ|飴|ボーロ|削りぶし|削り節|かつお節|鰹節|節$/;
 // 区分を出さずに聞く物（114.3(b) の除外や、水分・塩分で決まる物）
 const EXCLUDED_RE = /ジャム|マーマレード|プリザーブ|ゼリー/;
 const ASK_RE = /みそ|味噌|しょうゆ|醤油|羊羹|ようかん|どら焼|まんじゅう|饅頭|大福|最中|カステラ|和菓子|洋菓子|ケーキ|佃煮|つくだ煮/;
@@ -193,9 +193,13 @@ export function usCannedClass(label, answers = {}) {
   const text = [fieldValue(label, "名称"), fieldValue(label, "品名"), fieldValue(label, "原材料名")].join(" ");
   // 区分とは別に、商品の種類で許可や届け出が要るもの（決まりノート US-X13・X14）
   const also = [];
-  if (/果汁|ジュース/.test(text) && r.cls !== "ジュースのHACCP") also.push("果汁を使った飲み物なら、ジュースのHACCP（US-X13）も当たります。");
+  if (/(牛|豚|鶏|ビーフ|チキン|ポーク|肉)エキス/.test(text) && r.cls !== "農務省の管轄の見込み") also.push("肉のエキスが入っています。量によっては米国農務省（USDA）の管轄になるので、量を確かめてください（US-X4）。");
   if (/清酒|日本酒|焼酎|ビール|ワイン|リキュール|梅酒/.test(text)) also.push("お酒は、輸入者の輸入許可とラベルの承認（US-X14）が要ります。");
   return { ...r, also };
+}
+function isJuiceDrink(name, ingredients) {
+  if (/グミ|ゼリー|菓子|キャンディ|アイス|ジャム|ポン酢|ぽん酢|たれ|ドレッシング/.test(name)) return false;
+  return /ジュース|ネクター/.test(name) || (/飲料|ドリンク/.test(name) && /果汁|果実|りんご|みかん|ゆず|オレンジ|ぶどう|もも|野菜/.test(name + " " + ingredients.split(/[、,]/)[0]));
 }
 function usCannedClassCore(label, answers = {}) {
   const storage = [answers["保存"] || "", fieldValue(label, "保存方法")].join(" ");
@@ -214,12 +218,17 @@ function usCannedClassCore(label, answers = {}) {
     return { ...base, cls: "対象外", sure: true, why: `水分活性 ${aw}（0.85以下）なので、低酸性・酸性化食品には当たりません。` };
   if (/非加熱/.test(sterilize + " " + name) || /いいえ/.test(sealedAns))
     return { ...base, cls: "対象外", sure: false, why: "密封して加熱殺菌する食品ではない見込みなので、低酸性・酸性化食品には当たりません。" };
-  // 肉・卵が中心の物は、米国農務省（USDA）の管轄が先に来ることがある（US-X4・US-X7）
-  if (/牛肉|豚肉|鶏肉|ポーク|ビーフ|チキン|ベーコン|ハム|ソーセージ|肉/.test(name + " " + ingredients.split(/[、,]/).slice(0, 3).join(" ")) || /卵|たまご|玉子/.test(name))
-    return { ...base, cls: "農務省の管轄の見込み", sure: false, why: "肉や卵が中心の食品は、量によって米国農務省（USDA）の管轄になり、FDAとは別の決まりになります（US-X4・US-X7）。まず肉・卵の量を確かめます。" };
-  // 果汁の飲み物は、多くはもともと酸性で、ジュースのHACCP（US-X13）が先に当たる
-  if (/ジュース|果汁/.test(name))
-    return { ...base, cls: "ジュースのHACCP", sure: false, why: "果汁の飲み物は、低酸性食品ではなく、ジュースのHACCP（US-X13）が当たる見込みです。野菜ジュースなどpHが4.6を超える物は、低酸性食品にも当たります。" };
+  // 肉が中心の物は、米国農務省（USDA）の管轄が先に来ることがある（US-X4・US-X7）。「果肉」は肉ではない
+  const MEAT = /牛肉|豚肉|鶏肉|鴨肉|羊肉|(?<!果)肉(?!エキス)|ポーク|ビーフ|チキン|ベーコン|ハム(?!スター)|ソーセージ|ウインナー/;
+  const firstThree = ingredients.split(/[、,／/]/).slice(0, 3).join(" ");
+  if (MEAT.test(name.replace(/果肉/g, "")) || MEAT.test(firstThree.replace(/果肉/g, "")))
+    return { ...base, cls: "農務省の管轄の見込み", sure: false, why: "肉が中心の食品は、肉の量によって米国農務省（USDA）の管轄になり、FDAとは別の決まりになります（US-X4・US-X7）。まず肉の量を確かめます。" };
+  // 卵は「液卵・乾燥卵・冷凍卵」だけ（9 CFR 590.5。加熱した卵製品は外されている）
+  if (/液卵|乾燥卵|冷凍卵|卵黄粉|卵白粉|全卵粉/.test(name))
+    return { ...base, cls: "農務省の管轄の見込み", sure: false, why: "液卵・乾燥卵・冷凍卵は、米国農務省（USDA）の卵製品の決まりに当たる見込みです（US-X4）。" };
+  // 果汁の飲み物は、ジュースのHACCP（US-X13）が先に当たる（グミ・ゼリーなど飲み物でない物は外す）
+  if (isJuiceDrink(name, ingredients))
+    return { ...base, cls: "ジュースのHACCP", sure: false, why: "果汁の飲み物には、ジュースのHACCP（US-X13）が当たります。野菜ジュースなどpHが4.6を超える物は、低酸性食品の決まりも重なります。" };
   if (EXCLUDED_RE.test(name))
     return { ...base, cls: "対象外", sure: false, why: "ジャム・ゼリー類は、酸性化食品の決まりから外されています（21 CFR 114.3(b)）。" };
   if (pH !== null && aw !== null && sealed) {

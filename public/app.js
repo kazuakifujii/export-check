@@ -576,15 +576,27 @@ function usClassBand(c) {
   if (!u) return "";
   const lacf = u.cls === "低酸性缶詰食品", af = u.cls === "酸性化食品";
   const tone = lacf || af ? "ol-way" : ["分からない", "農務省の管轄の見込み", "ジュースのHACCP"].includes(u.cls) ? "ol-hard" : "ol-go";
-  const head = u.cls === "農務省の管轄の見込み" ? "米国では、農務省（USDA）の管轄になる見込みです" : u.cls === "ジュースのHACCP" ? "米国では、ジュースのHACCPが当たる見込みです" : lacf || af ? `米国では「${u.cls}」に${u.sure ? "当たります" : "当たる見込みです"}` : u.cls === "分からない" ? "米国の缶詰・レトルトの区分は、まだ決まっていません" : `米国の缶詰・レトルトの区分：${u.cls}${u.sure ? "" : "（見込み）"}`;
-  const needs = (US_CLASS_NEEDS[u.cls] || []);
+  // 言い方：数値で決まる物は「数値次第で」、条文で決まる物（冷蔵など）は言い切る（議論 11/4）
+  const head = {
+    低酸性缶詰食品: u.sure ? "米国の「低酸性缶詰食品」に当たります。" : "常温の密封・加熱殺菌品です。数値次第で、米国の「低酸性缶詰食品」に当たります。",
+    酸性化食品: u.sure ? "米国の「酸性化食品」に当たります。" : "常温の密封・加熱殺菌品で、酢などの酸が入っています。数値次第で、米国の「酸性化食品」に当たります。",
+    "冷蔵・冷凍": "冷蔵・冷凍なので、米国の缶詰の手続きには当たりません。",
+    対象外: u.sure ? "米国の缶詰の手続きには当たりません。" : "米国の缶詰の手続きには、当たらない見込みです。",
+    分からない: "米国の缶詰の手続きに当たるかは、工場に聞くと決まります。",
+    農務省の管轄の見込み: "米国では、農務省（USDA）の管轄になる見込みです。",
+    ジュースのHACCP: "米国では、ジュースのHACCPが当たります。",
+  }[u.cls] || u.cls;
+  const burden = lacf || af ? `<p><b>当たると：</b>工場の登録と、製品ごとの殺菌条件の届け出が要ります（手続きの負担が大きい）。</p>` : "";
+  const needs = US_CLASS_NEEDS[u.cls] || [];
   const row = c.items.find((i) => i.rowId === (af ? "US-X2" : "US-X1"));
-  const ways = lacf || af ? shortWays(row?.workaround) : [];
+  const ways = lacf || af ? shortWays(row?.workaround).map((w) => (/冷蔵/.test(w.head) ? { ...w, remain: [w.remain, "米国内の輸送・保管・店頭まで冷蔵を守れるか、輸入者に確かめるのが前提"].filter(Boolean).join("、") } : w)) : [];
   const ask = !u.sure && !["冷蔵・冷凍", "農務省の管轄の見込み"].includes(u.cls);
   const inp = (key, label, ph) => `<label class="qf"><span>${label}</span><input data-q="${key}" placeholder="${ph}" value="${esc(state.extraAnswers[key] || "")}"></label>`;
-  return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p><p>${explain(u.why)}</p>${(u.also || []).map((a) => `<p><b>あわせて：</b>${explain(a)}</p>`).join("")}
-    ${needs.length ? `<div class="way"><b>当たると要るもの</b><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul></div>` : ""}
+  return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p>${burden}
+    ${ask ? `<p><b>工場に聞くこと：</b>${u.needSealedQuestion ? "密封して加熱殺菌しているか、" : ""}完成品の pH と水分活性。入れると、当たるかどうかが決まります。</p>` : ""}
+    ${(u.also || []).map((a) => `<p><b>あわせて：</b>${explain(a)}</p>`).join("")}
     ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
+    <details class="more"><summary>くわしく</summary><p>${explain(u.why)}</p>${needs.length ? `<p><b>当たると要るもの</b></p><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul>` : ""}</details>
     ${ask ? `<div class="usask"><b>品質管理の担当に聞いて、入れてください</b>（「この商品の完成品の pH と水分活性を教えてください」）
       <div class="qin">${u.needSealedQuestion ? `<label class="qf"><span>密封して加熱殺菌していますか</span><select data-q="密封・加熱殺菌"><option value=""></option>${["はい", "いいえ"].map((o) => `<option ${state.extraAnswers["密封・加熱殺菌"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label>` : ""}${inp("pH", "pH", "例：5.8")}${inp("Aw", "水分活性", "例：0.97")}<label class="qf"><span>工場から店までの温度</span><select data-q="保存"><option value=""></option>${["ずっと冷蔵", "途中で常温に置く時間がある", "常温"].map((o) => `<option ${state.extraAnswers["保存"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label></div>
       <button class="primary rerun2">入れて、もう一度チェック</button></div>` : ""}
