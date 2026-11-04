@@ -575,12 +575,12 @@ function usClassBand(c) {
   const u = c.usClass;
   if (!u) return "";
   const lacf = u.cls === "低酸性缶詰食品", af = u.cls === "酸性化食品";
-  const tone = lacf || af ? "ol-way" : u.cls === "分からない" ? "ol-hard" : "ol-go";
-  const head = lacf || af ? `米国では「${u.cls}」に${u.sure ? "当たります" : "当たる見込みです"}` : u.cls === "分からない" ? "米国の缶詰・レトルトの区分は、まだ決まっていません" : `米国の缶詰・レトルトの区分：${u.cls}${u.sure ? "" : "（見込み）"}`;
+  const tone = lacf || af ? "ol-way" : ["分からない", "農務省の管轄の見込み", "ジュースのHACCP"].includes(u.cls) ? "ol-hard" : "ol-go";
+  const head = u.cls === "農務省の管轄の見込み" ? "米国では、農務省（USDA）の管轄になる見込みです" : u.cls === "ジュースのHACCP" ? "米国では、ジュースのHACCPが当たる見込みです" : lacf || af ? `米国では「${u.cls}」に${u.sure ? "当たります" : "当たる見込みです"}` : u.cls === "分からない" ? "米国の缶詰・レトルトの区分は、まだ決まっていません" : `米国の缶詰・レトルトの区分：${u.cls}${u.sure ? "" : "（見込み）"}`;
   const needs = (US_CLASS_NEEDS[u.cls] || []);
   const row = c.items.find((i) => i.rowId === (af ? "US-X2" : "US-X1"));
   const ways = lacf || af ? shortWays(row?.workaround) : [];
-  const ask = !u.sure && u.cls !== "冷蔵・冷凍";
+  const ask = !u.sure && !["冷蔵・冷凍", "農務省の管轄の見込み"].includes(u.cls);
   const inp = (key, label, ph) => `<label class="qf"><span>${label}</span><input data-q="${key}" placeholder="${ph}" value="${esc(state.extraAnswers[key] || "")}"></label>`;
   return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p><p>${explain(u.why)}</p>${(u.also || []).map((a) => `<p><b>あわせて：</b>${explain(a)}</p>`).join("")}
     ${needs.length ? `<div class="way"><b>当たると要るもの</b><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul></div>` : ""}
