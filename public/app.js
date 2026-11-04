@@ -105,6 +105,9 @@ function highlight(quote) {
 }
 
 // ---------- 結果 ----------
+// 画面に出す言葉（中のしくみの名前とは分けて、誤解されにくい言い方にする）
+const LEVEL_WORD = { 直せば出せる: "直す所あり（直したら再確認）", 問題なし: "見た範囲では問題なし" };
+const levelWord = (l) => LEVEL_WORD[l] || l;
 const LEVEL_CLASS = { 出せない: "lv-stop", 直せば出せる: "lv-fix", 確認が必要: "lv-ask", 輸出用に足す: "lv-add", 問題なし: "lv-ok", 対象外: "lv-na" };
 const BOX_ORDER = [
   ["入口", "そもそも、この国に出せるか", "産地や品目で、国として受け入れを止めているもの"],
@@ -117,8 +120,8 @@ const BOX_ORDER = [
 const QUESTION_FIELDS = {
   "0-1": [{ key: "主な原料の産地", label: "工場と主な原料の都道府県", placeholder: "例：工場は北海道、原料も北海道", why: "中国は、日本の10都県（福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野）の食品の輸入を止めています。この10都県に入るかを確かめるためだけに使います。" }],
   "US-X1": [
-    { key: "pH", label: "最終製品の pH", placeholder: "例：5.8", why: "米国では、pH 4.6 を超え、かつ水分活性 0.85 を超える常温の密封・加熱殺菌品は「低酸性缶詰食品」になり、工場の登録と殺菌工程の届け出が要ります。2つそろって判定できます。" },
-    { key: "Aw", label: "水分活性（Aw）", placeholder: "例：0.97" },
+    { key: "pH", label: "完成品の pH（品質管理の担当に測った値を聞いてください）", placeholder: "例：5.8", why: "米国では、pH 4.6 を超え、かつ水分活性 0.85 を超える常温の密封・加熱殺菌品は「低酸性缶詰食品」になり、工場の登録と殺菌工程の届け出が要ります。2つそろって判定できます。" },
+    { key: "Aw", label: "完成品の水分活性（Aw）", placeholder: "例：0.97" },
   ],
   "US-X2": [{ key: "pH", label: "最終製品の pH", placeholder: "例：4.2" }],
   "US-X3": [{ key: "保存", label: "工場から店までの温度", select: ["ずっと冷蔵", "途中で常温に置く時間がある", "常温"], why: "冷蔵で流通する食品は、米国の低酸性缶詰食品の決まりから外れます。ただし、表示ではなく実際にずっと冷蔵かで決まります。" }],
@@ -149,10 +152,10 @@ function renderCountry(c) {
   const s = c.summary;
   let html = `<div class="summary">
     <span class="chip lv-stop">出せない ${s["出せない"]}</span>
-    <span class="chip lv-fix">直せば出せる ${s["直せば出せる"]}</span>
+    <span class="chip lv-fix">直す所あり ${s["直せば出せる"]}</span>
     <span class="chip lv-ask">確認が必要 ${s["確認が必要"]}</span>
     <span class="chip lv-add">輸出用に足す ${s["輸出用に足す"]}</span>
-    <span class="chip lv-ok">問題なし ${s["問題なし"]}</span>
+    <span class="chip lv-ok">見た範囲では問題なし ${s["問題なし"]}</span>
     <span class="chip lv-na">対象外 ${s["対象外"]}</span>
     <span class="count">決まりノート ${c.noteRows}行のうち ${c.checkedRows}行を判定（判定日 ${esc(state.result.asOf)}）</span>
   </div>`;
@@ -229,15 +232,15 @@ function renderCountry(c) {
 
 function card(i) {
   const up = i.upcoming.map((d) => `<span class="tag up">${esc(d.label)} ${esc(d.date)}</span>`).join("");
-  const weak = i.weakSource ? `<span class="tag weak" title="${esc(i.marks.join(" "))}">出典の照合がまだ</span>` : "";
-  const prog = i.decidedBy === "program" ? `<span class="tag prog">判定表で決定</span>` : "";
-  const flags = i.flags.length ? `<div class="flags">確認が必要に下げました：${i.flags.map(esc).join("／")}</div>` : "";
+  const weak = i.weakSource ? `<span class="tag weak" title="${esc(i.marks.join(" "))}">根拠の条文・当局資料は未確認</span>` : "";
+  const prog = i.decidedBy === "program" ? `<span class="tag prog">決まった計算で判定</span>` : "";
+  const flags = i.flags.length ? `<div class="flags">言い切れないので「確認が必要」にしました：${i.flags.map(esc).join("／")}</div>` : "";
   const quote = i.labelQuote ? `<div class="q-label">ラベル：「${esc(i.labelQuote)}」</div>` : i.absentOnLabel ? `<div class="q-label">ラベル：書いていない</div>` : "";
   const answer = i.answerKeys.length ? `<div class="q-label">答え：${i.answerKeys.map(esc).join("、")}</div>` : "";
   const nq = i.noteQuote ? `<div class="q-note">ノート：「${esc(i.noteQuote)}」</div>` : "";
   const link = i.urls[0] ? `<a href="${esc(i.urls[0])}" target="_blank" rel="noopener">出典</a>` : "";
   return `<article class="card ${LEVEL_CLASS[i.level]}" data-quote="${esc(i.labelQuote)}">
-    <header><span class="badge ${LEVEL_CLASS[i.level]}">${esc(i.level)}</span><b>${esc(i.rowId)}</b> ${esc(i.title)}</header>
+    <header><span class="badge ${LEVEL_CLASS[i.level]}">${esc(levelWord(i.level))}</span><b>${esc(i.rowId)}</b> ${esc(i.title)}</header>
     <p>${esc(i.reason)}</p>
     ${quote}${answer}${nq}${flags}
     ${i.todo ? `<div class="todo">次に：${esc(i.todo)}</div>` : ""}
