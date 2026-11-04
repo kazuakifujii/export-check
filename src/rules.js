@@ -279,30 +279,44 @@ function usCannedClassCore(label, answers = {}) {
 }
 
 // EUの見せ場：動物由来の原料（決まりノート EU-X1・EU-F1）。割合による免除は無い
+const NF = "(?!風味|香料|フレーバー|味)";
 const EU_ANIMAL = [
-  [/宗田かつお節|宗田節/, "宗田かつお節"], [/かつお節|鰹節|かつおぶし|かれぶし|削りぶし/, "かつお節"], [/煮干|にぼし/, "煮干し"],
-  [/(かつお|鰹|魚介|ほたて|えび|かに|いか|さば|いわし)(エキス|だし)/, "魚介のエキス・だし"], [/(チキン|ポーク|ビーフ|牛|豚|鶏|肉)エキス/, "肉のエキス"],
-  [/乳製品|脱脂粉乳|全粉乳|バター|チーズ|生クリーム|乳糖|ホエイ|乳たんぱく/, "乳製品"], [/卵黄|卵白|全卵|鶏卵|(?<!乳化)卵(?!殻)/, "卵"],
-  [/はちみつ|蜂蜜/, "はちみつ"], [/ゼラチン/, "ゼラチン"], [/魚醤/, "魚醤"],
+  [/宗田かつお節|宗田節/, "宗田かつお節"], [/かつお節|鰹節|かつおぶし|かれぶし|削りぶし|かつお粉/, "かつお節"],
+  [/さば節|まぐろ節|むろあじ節|いわし節|混合節|雑節/, "ほかの節"], [/煮干|にぼし|いりこ|あご(だし)?(?![a-z])/, "煮干し・いりこ・あご"],
+  [new RegExp("(かつお|鰹|魚介|ほたて|えび|かに|いか|さば|いわし|あさり|かき|しじみ|昆布かつお)(エキス|だし|パウダー)" + NF), "魚介のエキス・だし"],
+  [/オイスターソース|魚醤|ナンプラー|いしる|しょっつる/, "魚介の調味料"],
+  [/かつお(?!節|ぶし|粉|だし|エキス)|鰹(?!節)|ちりめん|しらす|(?<!小)えび|海老|(?<![いた])いか(?!り)|たこ|魚肉|かまぼこ|すり身|魚油|いくら|たらこ|明太|魚卵|さけ(?!る)|鮭|まぐろ(?!節)|さば(?!節)/, "魚介"],
+  [new RegExp("(チキン|ポーク|ビーフ|牛|豚|鶏|肉)(エキス|ブイヨン|コンソメ|スープ)|豚骨|とんこつ|鶏ガラ|ラード|牛脂|豚脂|ゼラチン|コラーゲン" + NF), "肉・骨の原料"],
+  [new RegExp("乳製品|脱脂粉乳|全粉乳|(?<!ピーナッツ|ピーナツ|カカオ|ココア|アップル|シア|プラント)バター" + NF + "|チーズ" + NF + "|生クリーム|乳糖|ホエイ|乳たんぱく|牛乳|生乳|練乳|ヨーグルト|マーガリン|乳成分|発酵乳|クリーム(?!チーズ風味)"), "乳"],
+  [/卵黄|卵白|全卵|鶏卵|たまご|玉子|(?<!魚|乳化|殻)卵(?!殻)/, "卵"],
+  [new RegExp("はちみつ" + NF + "|蜂蜜" + NF + "|ローヤルゼリー|プロポリス"), "はちみつ・蜂の産物"],
 ];
 export function euAnimalBand(label) {
   const ing = fieldValue(label, "原材料名") || label.fullText || "";
   const found = [];
   for (const [re, nm] of EU_ANIMAL) if (re.test(ing) && !found.includes(nm)) found.push(nm);
-  if (found.includes("宗田かつお節") && found.includes("かつお節") && !/(?<!宗田)かつお節/.test(ing.replace(/宗田かつお節/g, ""))) found.splice(found.indexOf("かつお節"), 1);
+  if (found.includes("宗田かつお節") && found.includes("かつお節") && !/かつお節/.test(ing.replace(/宗田かつお節/g, ""))) found.splice(found.indexOf("かつお節"), 1);
+  if (found.includes("魚介") && found.some((f) => /節|煮干|エキス|調味料/.test(f)) && !/(ちりめん|しらす|えび|海老|いか|たこ|魚肉|かまぼこ|すり身|魚油|いくら|たらこ|明太|魚卵|鮭|さけ|まぐろ(?!節)|さば(?!節)|かつお(?!節|ぶし|粉|だし|エキス))/.test(ing.replace(/宗田かつお節|かつお節/g, ""))) found.splice(found.indexOf("魚介"), 1);
   return { found };
 }
 
 // 中国の見せ場：最後に加工した工場と主な原料の産地（決まりノート 0-1・0-7・0-9）
 export function cnOriginBand(label, answers = {}) {
-  const maker = label.fields.filter((f) => /製造者|製造所|加工者|販売者/.test(f.name)).map((f) => f.value).join(" ");
-  const makerPrefs = prefecturesInText(maker);
-  const ans = answers["主な原料の産地"] || answers["産地"] || "";
-  const ansStopped = CN_STOPPED_PREFECTURES.filter((p) => ans.includes(p));
+  // 基準は最後に加工した所（0-7）。販売者の住所では決めない
+  const makerFields = label.fields.filter((f) => /製造者|製造所|加工者|加工所/.test(f.name));
+  const maker = makerFields.map((f) => f.value).join(" ");
+  const uniq = (arr) => [...new Map(arr.map((p) => [prefName(p), p])).values()];
+  const makerPrefs = uniq(prefecturesInText(maker));
+  let ans = (answers["主な原料の産地"] || answers["産地"] || "").trim();
+  if (/不明|分から|わから|未定/.test(ans)) ans = "";
+  const ansClean = ans.replace(/(東京|福島|宮城|茨城|栃木|群馬|新潟|埼玉|千葉|長野)(都|県)?(以外|の外)/g, "");
+  const ansStopped = CN_STOPPED_PREFECTURES.filter((p) => ansClean.includes(p));
   const codeOnly = !makerPrefs.length && /[+＋][A-Za-z0-9０-９Ａ-Ｚ]{1,10}/.test(label.fullText || "");
-  const stopped = [...makerPrefs.filter(isStopped), ...ansStopped];
-  if (stopped.length) return { state: "止まる", prefs: stopped, why: `${stopped.join("・")}は、中国が食品の輸入を止めている10都県です。` };
+  const stopped = uniq([...makerPrefs.filter(isStopped), ...ansStopped.map((p) => p)].map((p) => (p.match(/(都|府|県)$/) ? p : p)));
+  const names = [...new Set(stopped.map(prefName))];
+  const rice = names.length === 1 && names[0] === "新潟" ? "（新潟県産の米だけは、産地の証明があれば出せます）" : "";
+  if (names.length) return { state: "止まる", prefs: names, why: `${names.join("・")}は、中国が食品の輸入を止めている10都県です。${rice}` };
   if (makerPrefs.length && ans) return { state: "10都県の外", prefs: makerPrefs, why: `工場は${makerPrefs.join("・")}、主な原料は「${ans}」で、どちらも10都県ではありません。` };
-  if (makerPrefs.length) return { state: "原料を聞く", prefs: makerPrefs, why: `ラベルの住所は${makerPrefs.join("・")}で、10都県ではありません。最後に加工した工場がここか、主な原料の産地も確かめます。` };
-  return { state: codeOnly ? "固有記号" : "分からない", prefs: [], why: codeOnly ? "製造所固有記号しか書いていないので、工場の県が分かりません。消費者庁のデータベースで調べるか、販売者に聞いてください。" : "工場と主な原料の都道府県が分かると決まります。" };
+  if (makerPrefs.length) return { state: "原料を聞く", prefs: makerPrefs, why: `製造所は${makerPrefs.join("・")}で、10都県ではありません。最後に加工した所がここか、主な原料の産地も確かめます。` };
+  return { state: codeOnly ? "固有記号" : "分からない", prefs: [], why: codeOnly ? "製造所固有記号しか書いていないので、工場の県が分かりません。消費者庁のデータベースで調べるか、販売者に聞いてください。" : "最後に加工した工場と、主な原料の都道府県が分かると決まります（販売者の住所では決まりません）。" };
 }

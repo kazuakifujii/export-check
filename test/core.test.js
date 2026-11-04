@@ -153,3 +153,14 @@ test("米国：水産の語の誤り、肉入りは肉の量が先", () => {
   const x = usCannedClass(rl2("名称：ビーフカレー\n原材料名：牛肉、たまねぎ\n保存方法：常温\n殺菌方法：レトルト"), { pH: "5.5", Aw: "0.95" });
   assert.equal(x.cls, "肉の量が先");
 });
+import { euAnimalBand, cnOriginBand } from "../src/rules.js";
+test("EU・中国の帯の誤り", () => {
+  const f = (i) => euAnimalBand(rl2("名称：x\n原材料名：" + i)).found;
+  assert.ok(f("ちりめん、山椒").length > 0);
+  assert.ok(f("小麦粉、（一部に乳成分を含む）").includes("乳"));
+  assert.deepEqual(f("砂糖、ピーナッツバター"), []);
+  assert.deepEqual(f("豆乳、乳化剤、乳酸菌"), []);
+  assert.equal(cnOriginBand(rl2("名称：x\n販売者：架空商事 東京都架空区\n製造所：架空食品 静岡県架空市"), {}).state, "原料を聞く");
+  assert.equal(cnOriginBand(rl2("名称：x\n販売者：架空商事 東京都架空区\n+AB12"), {}).state, "固有記号");
+  assert.equal(cnOriginBand(rl2("名称：x\n製造所：架空 静岡県架空市"), { 主な原料の産地: "不明" }).state, "原料を聞く");
+});

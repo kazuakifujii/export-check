@@ -608,7 +608,7 @@ function usClassBand(c) {
 function euBand(c) {
   const e = c.euAnimal;
   if (!e) return "";
-  if (!e.found.length) return `<div class="outlook usclass ol-go"><span class="tier">EU：動物由来の原料</span><p class="ol-main">ラベルからは、動物由来の原料は見つかっていません。</p><p class="hint">エキスや調味料の中身に入っていることがあるので、仕入先に確かめてください。</p></div>`;
+  if (!e.found.length) return `<div class="outlook usclass ol-hard"><span class="tier">EU：動物由来の原料</span><p class="ol-main">ラベルからは、動物由来の原料を拾えませんでした。</p><p>エキスや調味料の中身に入っていることがあります。「動物由来の原料は入っていますか」と仕入先に確かめてください。</p></div>`;
   const row = c.items.find((i) => i.rowId === "EU-X1");
   const ways = shortWays(row?.workaround);
   return `<div class="outlook usclass ol-way"><span class="tier">EU：動物由来の原料</span>
