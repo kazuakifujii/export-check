@@ -363,14 +363,14 @@ function whoGroup(askWho, todoKind) {
 function conceptMap() {
   return `<figure class="concept">
     <p class="concept-lead">ラベルを直せば出せる、とは限りません。この3つをセットで見ないと、見落とします。</p>
-    <div class="cbox c-製品"><b>製品の要件</b><small>ラベルと原料を、相手の国に合わせる</small>
-      <ul><li>アレルゲンの表示</li><li>使える添加物・着色料</li><li>栄養成分の表示</li></ul></div>
+    <div class="cbox c-製品"><b>製品の要件</b><small>同じ商品でも、国によって決まりが違います。ラベルと原料を、出す国に合わせます</small>
+      <ul><li>アレルゲンの対象が国ごとに違う（米国はごま、EUはセロリ・からしも）</li><li>日本で使える添加物・着色料が、使えない国がある</li><li>栄養成分の表示の様式が国ごとに違う</li></ul></div>
     <div class="carrow">→</div>
     <div class="cbox c-交差"><b>交差するところ</b><small>商品だけ、工場だけでは分からない条件を、先に見つけます</small>
       <ul><li>常温のレトルトは、米国で殺菌工程の届け出が要ることがある</li><li>鰹節入りは、EUの認定施設の鰹節が要ることがある</li></ul></div>
     <div class="carrow">←</div>
-    <div class="cbox c-施設"><b>施設の要件</b><small>作る・包む・保管する場所の準備</small>
-      <ul><li>工場の登録</li><li>ラベルを貼るだけの倉庫も、登録が要ることがある</li></ul></div>
+    <div class="cbox c-施設"><b>施設の要件</b><small>作る・包む・保管する場所に、国ごとに要る準備です。要る国と要らない国があります</small>
+      <ul><li>工場の登録が要る国がある（米国・中国など）</li><li>ラベルを貼るだけの倉庫も、登録が要ることがある</li><li>衛生管理の計画や、出荷ごとの届け出</li></ul></div>
     <figcaption>チャットのAIにラベルを見せて聞くと、書いてある物だけを確かめ、欄ごと無い項目や真ん中の決まりを見落としがちです。だからこの道具は、決まりノートの行を<strong>1行も飛ばさず</strong>全部当てはめます（ノートに無い決まりは見られません）。</figcaption>
   </figure>`;
 }
