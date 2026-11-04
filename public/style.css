@@ -210,3 +210,12 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .flow-last .flow-lane { border-left-color: var(--muted); }
 .flow-arrow { align-self: center; font-size: 22px; color: var(--accent); }
 @media (max-width: 760px) { .flow-row { flex-direction: column; } .flow-arrow { transform: rotate(90deg); } }
+.flow-step.par .flow-lane { border: 2px dashed var(--accent); border-left-width: 2px; }
+.par-tag { font-size: 11px; background: var(--accent); color: #fff; border-radius: 8px; padding: 0 6px; margin-left: 4px; }
+.flow-lane p { margin: 2px 0; }
+.lg-col { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-top: 8px; max-width: 560px; }
+.lg-box { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; width: 100%; background: #fff; display: flex; flex-direction: column; }
+.lg-box span { color: var(--muted); font-size: 12px; }
+.lg-ai { background: #eef4fb; } .lg-rule { background: #f3f0e6; }
+.lg-arrow { color: var(--muted); padding-left: 16px; }
+.lg-key { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--line); vertical-align: middle; margin-right: 4px; }

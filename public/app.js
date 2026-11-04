@@ -655,37 +655,37 @@ function cnBand(c) {
     ${ask ? `<div class="usask"><div class="qin"><label class="qf"><span>最後に加工した工場と、主な原料の都道府県</span><input data-q="主な原料の産地" placeholder="例：工場は静岡県、原料も静岡県" value="${esc(state.extraAnswers["主な原料の産地"] || "")}"></label></div><button class="primary rerun2">入れた内容で、もう一度チェックする</button></div>` : ""}</div>`;
 }
 
-// 判定のしくみの図（論理の組み立て）。読み取りはAI、決まりの当てはめはノートと固定のルール
+// 判定のしくみの図（論理の組み立て）。縦に並べ、AIの所と固定のルールの所を淡い2色で分ける
 function logicMap() {
-  const box = (h, t) => `<div class="flow-step"><div class="flow-lane"><b>${h}</b><p class="hint">${t}</p></div></div>`;
-  const ar = `<div class="flow-arrow">→</div>`;
-  return `<details class="flow logic"><summary>この判定のしくみ</summary><div class="flow-row">
-    ${box("① ラベルを読む", "写真の文字をAI（Claude）が読み取ります")}${ar}
-    ${box("② 決まりノートと照合", "製品・この製品だから・施設の要件と入口の条件を、1行ずつ当てはめます")}${ar}
-    ${box("③ 数値と地名は固定のルール", "pH・水分活性、10都県などは、毎回同じ答えになるようプログラムで決めます")}${ar}
-    ${box("④ 根拠の確認", "根拠の文がラベルやノートに見つからない判定は「確かめること」に下げます")}${ar}
-    ${box("⑤ 見立てと次の一歩", "4つの見立てのどれかと、だれに何を確認するかをご案内します")}
+  const box = (cls, h, t) => `<div class="lg-box ${cls}"><b>${h}</b><span>${t}</span></div>`;
+  const ar = `<div class="lg-arrow">↓</div>`;
+  return `<details class="flow logic"><summary>なぜこの判定か（根拠を見る）</summary><div class="lg-col">
+    ${box("lg-ai", "① ラベルを読む（AI）", "写真の文字をClaudeが読み取ります")}${ar}
+    ${box("lg-ai", "② 決まりノートと照合（AI）", "3つの要件と入口の条件を、1行ずつ当てはめます")}${ar}
+    ${box("lg-rule", "③ 数値と地名は固定のルール", "pH・水分活性、10都県などは、毎回同じ答えになるようプログラムで決めます")}${ar}
+    ${box("lg-rule", "④ 根拠の確認", "根拠の文が見つからない判定は「確かめること」に下げます")}${ar}
+    ${box("", "⑤ 見立てと次の一歩", "4つの見立てのどれかと、だれに何を確認するかをご案内します")}
+    <p class="hint"><span class="lg-key lg-ai"></span>AIが行う所　<span class="lg-key lg-rule"></span>固定のルールで決める所</p>
   </div></details>`;
 }
 
-// 進め方の図：同時に進められること（横に並ぶ）と、順番があること（矢印）を一目で（藤井さん 11/4）
+// 進め方の図：確認（同時に）→ 判断 → 準備（同時に）→ 出荷。項目名は入れず、相手と段階だけ（議論 11/4）
 function flowMap(c) {
+  if (c.verdict?.tier === "入口で無理") return "";
   const live = c.items.filter((i) => !i.setup && i.level !== "対象外");
   const qs = live.filter((i) => i.status === "分からない" && i.question);
-  const lane = (who) => qs.filter((i) => whoGroup(i.askWho, i.todoKind) === who);
-  const lanes = [["工場の品質管理の担当", "工場"], ["原料の仕入れ先", "仕入先"], ["相手の国の輸入者", "輸入者"], ["商社・倉庫", "商社・倉庫"]]
-    .map(([w, short]) => [short, lane(w)]).filter(([, l]) => l.length);
-  const reg = live.filter((i) => i.level === "直せば出せる" && ["施設", "交差", "入口"].includes(i.box));
-  const label = live.filter((i) => i.box === "製品" && ["直せば出せる", "輸出用に足す"].includes(i.level));
-  const setup = c.items.filter((i) => i.setup);
-  const chips = (arr, n = 3) => arr.slice(0, n).map((i) => `<li>${explain(plainTitle(i.title))}</li>`).join("") + (arr.length > n ? `<li class="more">ほか${arr.length - n}件</li>` : "");
-  if (!lanes.length && !reg.length && !label.length) return "";
-  return `<details class="flow" open><summary>進め方の図（同時に進められること・順番があること）</summary>
+  const who = new Set(qs.map((i) => whoGroup(i.askWho, i.todoKind)));
+  const people = [["工場の品質管理の担当", "工場"], ["原料の仕入れ先", "仕入先"], ["相手の国の輸入者", "輸入者"]].filter(([w]) => who.has(w)).map(([, n]) => n);
+  if (!people.includes("輸入者")) people.push("輸入者");
+  const hasReg = live.some((i) => i.level === "直せば出せる" && ["施設", "交差", "入口"].includes(i.box));
+  const step = (n, h, body, par) => `<div class="flow-step ${par ? "par" : ""}"><div class="flow-h"><span class="step">${n}</span>${h}${par ? `<span class="par-tag">同時に</span>` : ""}</div><div class="flow-lane">${body}</div></div>`;
+  const ar = `<div class="flow-arrow">→</div>`;
+  return `<details class="flow" open><summary>進め方の図</summary>
     <div class="flow-row">
-      ${lanes.length ? `<div class="flow-step"><div class="flow-h"><span class="step">1</span>同時に確認できます</div><div class="flow-lanes">${lanes.map(([n, l]) => `<div class="flow-lane"><b>${esc(n)}に確認</b><ul>${chips(l, 2)}</ul></div>`).join("")}</div></div><div class="flow-arrow">→</div>` : ""}
-      ${reg.length ? `<div class="flow-step"><div class="flow-h"><span class="step">${lanes.length ? 2 : 1}</span>答えが出たら、登録・届け出</div><div class="flow-lane"><ul>${chips(reg)}</ul><p class="hint">確認の結果で、要るかどうかが決まります。</p></div></div><div class="flow-arrow">→</div>` : ""}
-      <div class="flow-step"><div class="flow-h"><span class="step">${1 + (lanes.length ? 1 : 0) + (reg.length ? 1 : 0)}</span>輸出用のラベルを作る</div><div class="flow-lane"><ul>${chips(label)}</ul><p class="hint">原料や製法が決まってから作ると、作り直しが減ります。</p></div></div>
-      ${setup.length ? `<div class="flow-arrow">→</div><div class="flow-step flow-last"><div class="flow-h"><span class="step">${2 + (lanes.length ? 1 : 0) + (reg.length ? 1 : 0)}</span>輸出を決めたら、出荷の段取り</div><div class="flow-lane"><ul><li>${setup.length}件（下の欄）</li></ul><p class="hint">Claudeに順番表を作ってもらえます。</p></div></div>` : ""}
+      ${step(1, "確認", `<ul>${people.map((p) => `<li>${p}に確認</li>`).join("")}</ul><p class="hint">登録が要るか、どのくらい時間がかかるかも、ここで確かめます。商社にまとめて相談することもできます。</p>`, true)}${ar}
+      ${step(2, "判断", `<p>輸入者の受け入れ見込みと費用を確かめて、輸出するかを決めます。</p><p class="hint">この道具では費用は出ません。</p>`)}${ar}
+      ${step(3, "準備", `<ul>${hasReg ? "<li>登録・届け出</li>" : ""}<li>輸出用のラベル</li></ul><p class="hint">ラベルの案は早めに作れます。表示の確定は最後です。</p>`, true)}${ar}
+      ${step(4, "出荷", `<p>出荷の段取り</p><p class="hint">Claudeに順番表を作ってもらえます。</p>`)}
     </div></details>`;
 }
 
