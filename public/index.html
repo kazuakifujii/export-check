@@ -38,11 +38,11 @@
     <div class="panel">
       <h2><span class="step">2</span>出したい国を選ぶ</h2>
       <div class="countries">
-        <label><input type="checkbox" name="country" value="US" checked> 米国</label>
-        <label><input type="checkbox" name="country" value="EU" checked> EU</label>
-        <label><input type="checkbox" name="country" value="CN" checked> 中国</label>
+        <label><input type="radio" name="country" value="US" checked> 米国</label>
+        <label><input type="radio" name="country" value="EU"> EU</label>
+        <label><input type="radio" name="country" value="CN"> 中国</label>
       </div>
-      <p class="hint">ほかに入れるものはありません。判定に足りない事実があれば、結果の画面で、理由と一緒に聞き返します。</p>
+      <p class="hint">まず1つの国で調べます。ほかの国は、結果の画面の「次の輸出先でチェックする」から続けて調べられます。ほかに入れるものはありません。判定に足りない事実があれば、結果の画面で、理由と一緒に聞き返します。</p>
       <details class="settings"><summary>詳しい設定</summary>
         <div class="asof"><label>判定日 <input type="date" id="asOf"></label>
         <span class="hint">この日に施行されている決まりで判定します（施行前の決まりは「これから変わる」と出します）。</span></div>

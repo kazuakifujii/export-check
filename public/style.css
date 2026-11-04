@@ -97,3 +97,5 @@ table.note td.src { color: var(--muted); max-width: 280px; word-break: break-all
   .label-pane { position: static; max-height: none; }
   .tgrid { grid-template-columns: 1fr; } .q { grid-template-columns: 1fr; }
 }
+
+.next { margin-left: auto; font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; }

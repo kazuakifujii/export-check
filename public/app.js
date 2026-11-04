@@ -55,11 +55,16 @@ async function post(url, body) {
   return j;
 }
 
-$("#run").addEventListener("click", () => run(true));
+$("#run").addEventListener("click", () => {
+  const picked = document.querySelector("input[name=country]:checked");
+  if (!picked) return setStatus("輸出先を1つ選んでください");
+  run(true, picked.value);
+});
 
-async function run(reread) {
-  const countries = [...document.querySelectorAll("input[name=country]:checked")].map((x) => x.value);
-  if (!countries.length) return setStatus("国を1つ以上選んでください");
+const COUNTRY_NAMES = { US: "米国", EU: "EU", CN: "中国" };
+
+// 1つの国だけをチェックする。前にチェックした国の結果は残し、タブで見比べられる
+async function run(reread, country) {
   const btn = $("#run");
   btn.disabled = true;
   try {
@@ -67,14 +72,17 @@ async function run(reread) {
       if (!state.image && !$("#labelText").value.trim()) throw new Error("ラベルの写真か文字を入れてください");
       setStatus("ラベルを読んでいます…");
       state.label = await post("/api/read", state.image ? { image: state.image, mediaType: state.mediaType } : { text: $("#labelText").value });
+      state.result = null; // 新しいラベルなので、前の結果は消す
       renderLabel();
       $("#result").hidden = false;
     }
-    setStatus(`決まりノートを1行ずつ当てはめています（${countries.length}か国）… 1分ほどかかります`);
-    state.result = await post("/api/check", { label: state.label, countries, answers: collectAnswers(), asOf: $("#asOf").value });
-    state.country = state.country && countries.includes(state.country) ? state.country : countries.includes("CN") ? "CN" : countries[0];
+    setStatus(`${COUNTRY_NAMES[country]}の決まりノートを1行ずつ当てはめています… 1分ほどかかります`);
+    const r = await post("/api/check", { label: state.label, countries: [country], answers: collectAnswers(), asOf: $("#asOf").value });
+    state.result = { ...r, countries: { ...(state.result?.countries || {}), ...r.countries } };
+    state.country = country;
     renderResult();
     setStatus("");
+    $("#result").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
     setStatus("うまくいきませんでした：" + e.message);
   } finally {
@@ -126,7 +134,14 @@ function renderResult() {
         <span class="mini lv-stop">${s["出せない"]}</span><span class="mini lv-fix">${s["直せば出せる"]}</span><span class="mini lv-ask">${s["確認が必要"]}</span></button>`;
     })
     .join("");
+  const rest = Object.keys(COUNTRY_NAMES).filter((c) => !cs.includes(c));
+  if (rest.length) {
+    $("#countryTabs").innerHTML += `<span class="next">次の輸出先でチェックする：${rest
+      .map((c) => `<button class="ghost nextc" data-c="${c}">${COUNTRY_NAMES[c]}</button>`)
+      .join("")}</span>`;
+  }
   document.querySelectorAll(".ctab").forEach((b) => b.addEventListener("click", () => { state.country = b.dataset.c; renderResult(); }));
+  document.querySelectorAll(".nextc").forEach((b) => b.addEventListener("click", () => run(false, b.dataset.c)));
   renderCountry(r.countries[state.country]);
 }
 
@@ -208,7 +223,7 @@ function renderCountry(c) {
       if (el.value.trim()) state.extraAnswers[el.dataset.q] = el.value.trim();
       else delete state.extraAnswers[el.dataset.q];
     });
-    run(false);
+    run(false, state.country);
   });
 }
 
