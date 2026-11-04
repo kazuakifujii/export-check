@@ -37,7 +37,7 @@ const JUDGE_SCHEMA = {
           note_quote: { type: "string", description: "根拠にした決まりノートの行の文。行から一続きにそのまま写す（60字以内、省略記号なし）" },
           question: { type: "string", description: "分からないとき、何が分かれば決まるかの質問を1つ。輸出が初めての人がそのまま答えられる言葉で。専門用語・略語・条文番号は使わない（どうしても要るときは括弧で言い換える）。それ以外は空" },
           question_why: { type: "string", description: "分からないとき、なぜそれで決まるのか、答えによってどう変わるかを1〜2文（例：『常温なら〇〇の届け出が要り、ずっと冷蔵なら要りません』）。専門用語は使わない。それ以外は空" },
-          ask_who: { type: "string", description: "分からないとき、誰に聞けば分かるか（例：工場の品質管理の担当、原料の仕入れ先、相手の国の輸入者、商社）。それ以外は空" },
+          ask_who: { type: "string", enum: ["工場の品質管理の担当", "原料の仕入れ先", "相手の国の輸入者", "商社・倉庫", "そのほか", ""], description: "分からないとき、誰に聞けば分かるか。分からない以外は空" },
           todo_kind: { type: "string", enum: TODO_KINDS },
           todo: { type: "string", description: "次にやることを短く1行。無ければ空" },
         },

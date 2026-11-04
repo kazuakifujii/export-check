@@ -134,3 +134,10 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .concern { display: grid; gap: 4px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
 #sample { margin-top: 12px; }
 .ifstopped { font-size: 13px; margin-top: 8px; } .ifstopped em { color: var(--muted); font-style: normal; font-size: 11px; }
+.top { align-items: start; }
+.brand .lead { font-size: 16px; color: var(--ink); margin: 4px 0 2px; } .brand .sublead { font-size: 12px; margin: 0 0 8px; }
+#conceptHead { flex-basis: 100%; }
+.concept-lead { grid-column: 1 / -1; margin: 0; font-weight: 700; font-size: 15px; }
+.qgroup { border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; margin: 8px 0; background: #fff; }
+.qgroup summary { font-weight: 700; color: var(--ink); }
+.progress { font-size: 14px; margin: 4px 0; }

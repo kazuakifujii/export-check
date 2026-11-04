@@ -168,7 +168,6 @@ function renderCountry(c) {
   if (f) {
     html += `<div class="filterbar">「${esc(levelWord(f))}」だけを表示しています（${s[f]}件） <button class="ghost" id="showAll">すべて表示に戻す</button></div>`;
   }
-  html += conceptMap();
   html += `<div class="boxes">`;
   for (const [key, name, sub] of BOX_ORDER) {
     const items = c.items.filter((i) => i.box === key);
@@ -194,10 +193,11 @@ function renderCountry(c) {
   const qs = c.items.filter((i) => i.status === "分からない" && i.question);
   if (qs.length) {
     const usedKeys = new Set();
-    const rowsHtml = qs.map((i) => {
+    const groups = new Map();
+    qs.forEach((i) => {
       const fields = (QUESTION_FIELDS[i.rowId] || []).filter((f) => !usedKeys.has(f.key));
       fields.forEach((f) => usedKeys.add(f.key));
-      if (QUESTION_FIELDS[i.rowId] && fields.length === 0) return "";
+      if (QUESTION_FIELDS[i.rowId] && fields.length === 0) return;
       const inputs = fields.length
         ? fields.map((f) => `<label class="qf"><span>${esc(f.label)}</span>${
             f.select
@@ -206,15 +206,21 @@ function renderCountry(c) {
           }</label>`).join("")
         : `<input data-q="${esc(i.rowId)}の答え" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
       const why = fields.map((f) => f.why).filter(Boolean).join(" ") || i.questionWhy || i.reason;
-      return `<div class="q"><div>
+      const who = whoGroup(i.askWho, i.todoKind);
+      if (!groups.has(who)) groups.set(who, []);
+      groups.get(who).push(`<div class="q"><div>
         <div class="q-topic">${explain(plainTitle(i.title))} <small>${esc(i.rowId)}</small></div>
         <div class="q-ask">${explain(i.question)}</div>
         ${why ? `<div class="why"><b>なぜ聞くか：</b>${explain(why)}</div>` : ""}
-        ${i.askWho ? `<div class="why"><b>誰に聞けば分かるか：</b>${esc(i.askWho)}</div>` : ""}
-      </div><div class="qin">${inputs}</div></div>`;
-    }).join("");
-    html += `<section class="questions"><h3>教えてもらえれば決まること（${qs.length}）</h3>
-      <p class="hint">この商品のことで、ラベルからは読めず、判定が決まらなかった所です。分かる所だけ答えて、もう一度チェックできます。分からない所は空のままで大丈夫です（その行は「確認が必要」のまま残ります）。点線の下線の言葉は、マウスを乗せると意味が出ます。</p>
+      </div><div class="qin">${inputs}</div></div>`);
+    });
+    const order = [...WHO_GROUPS.map((g) => g[0]), "そのほか"];
+    const rowsHtml = order.filter((w) => groups.has(w)).map((w) =>
+      `<details class="qgroup" open><summary>${esc(w)}に聞く ${groups.get(w).length}つ</summary>${groups.get(w).join("")}</details>`).join("");
+    const decided = c.items.length - qs.length;
+    html += `<section class="questions"><h3>次に確かめること</h3>
+      <p class="progress">決まりノート ${c.items.length}行のうち <b>${decided}行</b>は、もう見終わりました。残りは ${qs.length}行です。<span class="hint">（見終わった＝問題なし、ではありません。上の判定を見てください）</span></p>
+      <p class="hint">一人で全部答えなくて大丈夫です。分かる人に聞いて、分かった所から入れてください。未確認のままでも進めますが、未確認の所は「確認が必要」として残ります。点線の下線の言葉は、マウスを乗せると意味が出ます。</p>
       ${rowsHtml}
       <button class="primary" id="rerun">答えて、もう一度チェック</button></section>`;
   }
@@ -296,19 +302,35 @@ function plainTitle(t) {
 }
 
 // 3つの要件の概念図（例つき）。結果の上に出して、各行がどこに入るかを分かるようにする
+// 聞く相手ごとにまとめる（答えが返ってきた言葉から振り分ける）
+const WHO_GROUPS = [
+  ["工場の品質管理の担当", /工場|品質|製造|自社/],
+  ["原料の仕入れ先", /仕入|原料メーカー|原料の/],
+  ["相手の国の輸入者", /輸入者|輸入業者|バイヤー/],
+  ["商社・倉庫", /商社|倉庫|物流|通関/],
+];
+function whoGroup(askWho, todoKind) {
+  const t = askWho || "";
+  for (const [name, re] of WHO_GROUPS) if (re.test(t)) return name;
+  if (todoKind === "輸入者に聞く") return "相手の国の輸入者";
+  return "そのほか";
+}
+
 function conceptMap() {
   return `<figure class="concept">
-    <div class="cbox c-製品"><b>製品の要件</b><small>何を、どう表示するか</small>
-      <ul><li>アレルゲン（魚種、ごま）</li><li>着色料</li><li>栄養成分の様式</li><li>オンスの併記</li></ul></div>
+    <p class="concept-lead">ラベルを直せば出せる、とは限りません。この3つをセットで見ないと、見落とします。</p>
+    <div class="cbox c-製品"><b>製品の要件</b><small>ラベルと原料が、相手の国の決まりに合うか</small>
+      <ul><li>アレルゲンの表示</li><li>使える添加物・着色料</li><li>栄養成分の表示</li></ul></div>
     <div class="carrow">→</div>
-    <div class="cbox c-交差"><b>交差するところ</b><small>この商品を、この工場で</small>
-      <ul><li>米国：低酸性食品<br>→ 工程の届け出<br>→ 講習済みの責任者</li><li>EU：鰹節の出どころ<br>→ 認定施設のものか</li></ul></div>
+    <div class="cbox c-交差"><b>交差するところ</b><small>この商品を、この工場で作るから生まれる決まり。ラベルだけ見ても、工場だけ見ても気づきません</small>
+      <ul><li>常温のレトルトは、米国で殺菌工程の届け出が要ることがある</li><li>鰹節入りは、EUの認定施設の鰹節が要ることがある</li></ul></div>
     <div class="carrow">←</div>
-    <div class="cbox c-施設"><b>施設の要件</b><small>どこで作り、扱うか</small>
-      <ul><li>食品施設の登録</li><li>ラベル貼りや倉庫も</li><li>米国内の代理人</li><li>衛生管理の計画</li></ul></div>
-    <figcaption>決まりは、この3つのどれかに入ります。いちばん見落としやすいのは真ん中の「交差するところ」。商品の中身と、作る工場の組み合わせで初めて決まるので、表示の担当にも工場の担当にも見えにくい所です。</figcaption>
+    <div class="cbox c-施設"><b>施設の要件</b><small>作る・包む・保管する場所に、登録や衛生管理があるか</small>
+      <ul><li>工場の登録</li><li>ラベルを貼るだけの倉庫も、登録が要ることがある</li></ul></div>
+    <figcaption>チャットのAIにラベルを見せて聞くと、書いてある物だけを確かめ、欄ごと無い項目や真ん中の決まりを見落としがちです。だからこの道具は、決まりノートの行を<strong>1行も飛ばさず</strong>全部当てはめます（ノートに無い決まりは見られません）。</figcaption>
   </figure>`;
 }
+$("#conceptHead").innerHTML = conceptMap();
 
 function card(i) {
   const up = i.upcoming.map((d) => `<span class="tag up">${esc(d.label)} ${esc(d.date)}</span>`).join("");
