@@ -149,7 +149,7 @@ export function loadNote(notePath = process.env.NOTE_PATH || DEFAULT_NOTE_PATH) 
 
 // ある国で総当たりする行（入口の行のうちその国のもの＋その国の行）
 export function rowsForCountry(note, country) {
-  return note.rows.filter((r) => r.country === country);
+  return note.rows.filter((r) => r.country === country || r.country === "ALL");
 }
 
 // 1行を、Claude に渡す文章にする
