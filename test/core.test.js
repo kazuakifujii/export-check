@@ -164,3 +164,9 @@ test("EU・中国の帯の誤り", () => {
   assert.equal(cnOriginBand(rl2("名称：x\n販売者：架空商事 東京都架空区\n+AB12"), {}).state, "固有記号");
   assert.equal(cnOriginBand(rl2("名称：x\n製造所：架空 静岡県架空市"), { 主な原料の産地: "不明" }).state, "原料を聞く");
 });
+test("EU：不使用・風味は拾わない", () => {
+  const f = (i) => euAnimalBand(rl2("名称：x\n原材料名：" + i)).found;
+  assert.deepEqual(f("米粉、（卵不使用）"), []);
+  assert.deepEqual(f("えび風味スナック"), []);
+  assert.deepEqual(f("かつお菜、しょうゆ"), []);
+});

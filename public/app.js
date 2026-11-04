@@ -612,20 +612,30 @@ function euBand(c) {
   const row = c.items.find((i) => i.rowId === "EU-X1");
   const ways = shortWays(row?.workaround);
   return `<div class="outlook usclass ol-way"><span class="tier">EU：動物由来の原料</span>
-    <p class="ol-main">動物由来の原料（${esc(e.found.join("、"))}）は、EUのリストに載った施設で作った物しか使えません。</p>
+    ${(e.fish || e.found).length ? `<p class="ol-main">${esc((e.fish || e.found).join("、"))}は、EU向けに認められた工場で作った物しか使えません。</p>` : ""}
+    ${(e.other || []).length ? `<p${(e.fish || []).length ? "" : ` class="ol-main"`}>${esc(e.other.join("、"))}にも、EU向けに認められた工場の物であることなどの条件があります。</p>` : ""}
     <p>量が少なくても同じです（割合による免除はありません）。</p>
-    <p><b>仕入先に聞くこと：</b>「この原料は、EUのリストに載った施設で作っていますか」</p>
+    <p><b>仕入先に聞くこと：</b>「この原料は、EU向けに認められた工場で作っていますか」</p>
     ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}</div>`;
 }
 // 中国の見せ場：最後に加工した工場と主な原料が、輸入を止めている10都県か
 function cnBand(c) {
   const o = c.cnOrigin;
   if (!o) return "";
+  const asOf = state.result?.noteConfirmedOn || state.result?.asOf || "";
   const tone = { 止まる: "ol-stop", "10都県の外": "ol-go" }[o.state] || "ol-hard";
-  const head = { 止まる: "中国へは、この産地のままでは出せません。", "10都県の外": "産地では止まりません。", 原料を聞く: "工場の県は10都県の外です。主な原料の産地を確かめます。", 固有記号: "工場の県が分かりません。", 分からない: "産地で止まるかは、まだ決まっていません。" }[o.state];
+  const head = {
+    止まる: `${o.where === "工場" ? "工場" : "主な原料"}が${(o.prefs || []).join("・")}なので、この産地のままでは中国に出せません。`,
+    "10都県の外": "産地による停止には、当たらない見込みです。",
+    原料を聞く: "工場の県は10都県の外です。主な原料の産地を確かめます。",
+    固有記号: "工場の県が分かりません。",
+    分からない: "産地で止まるかは、まだ決まっていません。",
+  }[o.state];
   const ask = !["止まる", "10都県の外"].includes(o.state);
-  return `<div class="outlook usclass ${tone}"><span class="tier">中国：工場と原料の産地</span><p class="ol-main">${esc(head)}</p><p>${explain(o.why)}</p>
-    <p class="hint">中国は、福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野の食品を止めています。工場が登録済みでも、最後に加工した所か、主な原料（重さで一番多い原料）がここなら止まります。ほかの原料の産地は問われません。</p>
+  const after = o.state === "10都県の外" ? `<p>ただし、産地の証明書、最後に保管する場所と輸送経路、工場の登録の確認が要ります。</p>` : "";
+  const way = o.state === "止まる" ? `<div class="way"><b>回避策</b><ul><li>10都県の外の工場で作り、主な原料も10都県の外にする<div class="remain">大がかりです。工場だけでなく、原料の産地も要ります</div></li></ul></div>` : "";
+  return `<div class="outlook usclass ${tone}"><span class="tier">中国：工場と原料の産地</span><p class="ol-main">${esc(head)}</p><p>${explain(o.why)}${asOf ? `（確認日 ${esc(asOf)}）` : ""}</p>${after}${way}
+    <details class="more"><summary>対象の10都県を確かめる</summary><p>福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野。最後に加工した所か、主な原料（重さで一番多い原料）がここだと、工場が登録済みでも出せません。ほかの原料の産地は問われません（農林水産省の公表資料）。</p></details>
     ${ask ? `<div class="usask"><div class="qin"><label class="qf"><span>最後に加工した工場と、主な原料の都道府県</span><input data-q="主な原料の産地" placeholder="例：工場は静岡県、原料も静岡県" value="${esc(state.extraAnswers["主な原料の産地"] || "")}"></label></div><button class="primary rerun2">入れて、もう一度チェック</button></div>` : ""}</div>`;
 }
 
