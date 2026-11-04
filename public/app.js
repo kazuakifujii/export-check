@@ -153,10 +153,8 @@ function renderResult() {
       .join("")}</span>`;
   }
   document.querySelectorAll(".ctab").forEach((b) => b.addEventListener("click", () => { state.country = b.dataset.c; state.filter = null; renderResult(); }));
-  $("#countryTabs").innerHTML += `<button class="ghost opbtn" id="opOpen">社長に出す1枚</button>`;
-  $("#opOpen").addEventListener("click", openOnePager);
   document.querySelectorAll(".nextc").forEach((b) => b.addEventListener("click", () => run(false, b.dataset.c)));
-  if (state.view === "label") renderAnnotated(r.countries[state.country]);
+  if (state.view === "label") renderAnnotated();
   else renderCountry(r.countries[state.country]);
   $("#countryBody").insertAdjacentHTML("afterbegin", `<div class="viewsw"><button class="ghost ${state.view !== "label" ? "on" : ""}" data-v="table">チェック表で見る</button><button class="ghost ${state.view === "label" ? "on" : ""}" data-v="label">ラベルに書き込んで見る</button></div>`);
   document.querySelectorAll(".viewsw button").forEach((b) => b.addEventListener("click", () => { state.view = b.dataset.v; renderResult(); }));
@@ -190,7 +188,8 @@ function renderCountry(c) {
   html += `<div class="boxes">`;
   for (const [key, name, sub] of BOX_ORDER) {
     const items = c.items.filter((i) => i.box === key);
-    if (!items.length) continue;
+    // 製品・交差・施設の枠は、当てはまる物が無くても残す（「懸念が見つかっていない」と伝わるように。藤井さん 11/4）
+    if (!items.length && key === "入口") continue;
     if (f) {
       const only = items.filter((i) => i.level === f);
       if (only.length) html += `<section class="box box-${key}"><h3>${name}<small>${sub}</small></h3>${only.map(card).join("")}</section>`;
@@ -202,7 +201,7 @@ function renderCountry(c) {
     const na = items.filter((i) => i.level === "対象外");
     html += `<section class="box box-${key}">
       <h3>${name}<small>${sub}</small></h3>
-      ${shown.map(card).join("") || `<p class="hint">ここで引っかかる所は見つかっていません</p>`}
+      ${shown.map(card).join("") || `<p class="none-box">今回の確認では、${key === "交差" ? "この製品だから必要な要件" : name}で気をつける所は見つかっていません。${na.length ? `（当てはまらない項目 ${na.length}件は、下にまとめています）` : ""}</p>`}
       ${add.length ? `<details class="addon"><summary>＋α 輸出用ラベルで足す所（${add.length}）</summary>
         <p class="hint">日本のラベルに無いのは当たり前のものです。輸出用のラベルを作るときに入れてください。</p>${add.map(card).join("")}</details>` : ""}
     </section>`;
@@ -433,63 +432,56 @@ document.addEventListener("click", (e) => {
   renderResult();
 }, true);
 
-// 社長に出す1枚：調べた国を横に並べ、結果をまとめるだけ（新しい判定はしない）
-function openOnePager() {
-  const r = state.result;
-  const cs = Object.keys(r.countries);
-  const list = (items, f) => items.length ? `<ul>${items.slice(0, 6).map(f).join("")}${items.length > 6 ? `<li class="hint">ほか ${items.length - 6}件</li>` : ""}</ul>` : `<p class="hint">なし</p>`;
-  const col = (code) => {
-    const c = r.countries[code];
-    const by = (lv) => c.items.filter((i) => i.level === lv);
-    const ask = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, code) - qPriority(y, code));
-    const docs = c.tomorrow["日本で取る書類"] || [];
-    const v = c.verdict || { tier: "進められる見込み", items: [] };
-    return `<section class="op-col"><h3>${esc(c.name)}　<span class="tier-s">${esc(v.tier)}</span></h3>
-      ${v.items.length ? `<ul>${v.items.map((x) => `<li>${esc(plainTitle(x.title))}${x.workaround ? `<br><small>回避策：${esc(x.workaround)}</small>` : ""}</li>`).join("")}</ul>` : ""}
-      <p class="op-count"><span class="g-stop">出荷できない条件 ${c.summary["出せない"]}</span>／<span class="g-fix">直す所 ${c.summary["直せば出せる"]}</span>／<span class="g-ask">確かめること ${c.summary["確認が必要"]}</span></p>
-      <h4>出荷できない条件</h4>${list(by("出せない"), (i) => `<li>${esc(plainTitle(i.title))}<br><small>${esc(i.todo || i.reason)}</small></li>`)}
-      <h4>直す所（表示・登録・証明書）</h4>${list(by("直せば出せる"), (i) => `<li>${esc(plainTitle(i.title))}${i.todo ? `<br><small>${esc(i.todo)}</small>` : ""}</li>`)}
-      <h4>日本で取る書類・登録</h4>${list(docs, (t) => `<li>${esc(t.text)}</li>`)}
-      <h4>まだ決まっていないこと（誰に聞くか）</h4>${list(ask, (i) => `<li>${esc(i.question)}<br><small>${esc(whoGroup(i.askWho, i.todoKind))}に聞く</small></li>`)}
-      <p class="hint">輸出用ラベルで足す所 ${c.summary["輸出用に足す"]}件は、ラベルを作るときにまとめて入れます。</p>
-    </section>`;
-  };
-  const concern = state.lastConcern ? `<p><b>気になっていること：</b>${esc(state.lastConcern)}</p>` : "";
-  $("#opBody").innerHTML = `<header class="op-head"><h2>輸出の検討メモ：${esc((state.label?.fields || []).find((f) => /名称|品名/.test(f.name))?.value || "この商品")}</h2>
-      <p>判定日 ${esc(r.asOf)}／調べた国：${cs.map((c) => esc(r.countries[c].name)).join("・")}</p>
-      <p><b>今回お願いしたいこと：</b>下の「まだ決まっていないこと」を担当に確かめ、「直す所」の見積もりを取ること。そのうえで、どの国から相談を始めるかを決めます。</p>${concern}</header>
-    <div class="op-grid" style="grid-template-columns: repeat(${cs.length}, 1fr)">${cs.map(col).join("")}</div>
-    <p class="hint">${cs.length < 3 ? "ほかの国も調べると、ここに並びます。" : ""}この1枚は相談の準備用です。輸入許可や通関を保証するものではありません。費用や日数は、輸入者や専門家の見積もりで確かめてください。</p>`;
-  $("#onePager").hidden = false;
-}
-$("#opClose").addEventListener("click", () => ($("#onePager").hidden = true));
-$("#opPrint").addEventListener("click", () => window.print());
-
 // ラベルに書き込んで見る：読み取ったラベルを描き直し、その行の横に指摘を付ける。
 // ラベルに書いていない項目や工場の話は、製造者の行か、下の「ラベルに無い所」に付ける。
-function renderAnnotated(c) {
+function renderAnnotated() {
+  // 3か国を並べて書き込む（藤井さん 11/4）。調べた国が列になり、まだの国は「チェックする」ボタン
+  const r = state.result;
   const lines = state.label.lines;
+  const cs = ["US", "EU", "CN"].filter((c) => r.countries[c]);
+  const rest = ["US", "EU", "CN"].filter((c) => !r.countries[c]);
   const keep = (i) => ["出せない", "直せば出せる", "確認が必要", "輸出用に足す"].includes(i.level);
-  const items = c.items.filter(keep);
-  const at = lines.map(() => []);
-  const missing = [];
   const makerLine = lines.findIndex((l) => /製造者|製造所|販売者|加工者/.test(l));
-  for (const i of items) {
-    const q = nrm(i.labelQuote);
-    let k = q ? lines.findIndex((l) => nrm(l).includes(q)) : -1;
-    if (k === -1 && (i.box === "施設" || i.box === "交差") && makerLine !== -1 && !i.absentOnLabel) k = makerLine;
-    if (k === -1) missing.push(i);
-    else at[k].push(i);
+  // place[国][行] = 指摘の配列。最後の行（lines.length）は「ラベルに書いていない所」
+  const place = {};
+  for (const code of cs) {
+    const at = lines.map(() => []).concat([[]]);
+    for (const i of r.countries[code].items.filter(keep)) {
+      const q = nrm(i.labelQuote);
+      let k = q ? lines.findIndex((l) => nrm(l).includes(q)) : -1;
+      if (k === -1 && (i.box === "施設" || i.box === "交差") && makerLine !== -1 && !i.absentOnLabel) k = makerLine;
+      at[k === -1 ? lines.length : k].push(i);
+    }
+    place[code] = at;
   }
-  const call = (i) => `<div class="callout ${LEVEL_CLASS[i.level]}"><span class="badge ${LEVEL_CLASS[i.level]}">${esc(levelWord(i.level))}</span>
-    <b>${explain(plainTitle(i.title))}</b>${i.todo || i.question ? `<div class="why">${explain(i.todo || i.question)}</div>` : ""}</div>`;
-  const rows = lines.map((l, k) => `<div class="al-row ${at[k].length ? "has" : ""}"><div class="al-line">${esc(l)}</div>
-      <div class="al-arrow">${at[k].length ? "◀" : ""}</div><div class="al-calls">${at[k].length ? at[k].map(call).join("") : `<span class="al-none">今回の確認では、追加の指摘はありません</span>`}</div></div>`).join("");
-  const photo = state.image ? `<details class="al-photo"><summary>元の写真と見比べる（読み取りが違っていたら、チェック表の「次に確かめること」で直せます）</summary><img src="data:${esc(state.mediaType)};base64,${state.image}" alt="ラベルの写真"></details>` : "";
-  $("#countryBody").innerHTML = outlook(c) + photo + `<p class="hint">読み取ったラベルの行の横に、${esc(c.name)}で引っかかる所を書き込みました。くわしい理由と根拠は「チェック表で見る」で確かめられます。</p>
-    <div class="annot">${rows}
-      ${missing.length ? `<div class="al-row has al-missing"><div class="al-line">（ラベルに書いていない所・工場や手続きの話）</div><div class="al-arrow">◀</div><div class="al-calls">${missing.map(call).join("")}</div></div>` : ""}
-    </div>`;
+  const ORDER = { 出せない: 0, 直せば出せる: 1, 確認が必要: 2, 輸出用に足す: 3 };
+  const call = (i) => `<details class="callout ${LEVEL_CLASS[i.level]}"><summary><span class="dot ${LEVEL_CLASS[i.level]}" title="${esc(levelWord(i.level))}"></span>${explain(plainTitle(i.title))}</summary>
+    ${i.todo || i.question ? `<div class="why">${explain(i.todo || i.question)}</div>` : ""}${i.workaround ? `<div class="why"><b>回避策：</b>${shortWays(i.workaround).map((w) => explain(w.head)).join("／")}</div>` : ""}</details>`;
+  const cell = (code, k) => {
+    const its = place[code][k].slice().sort((x, y) => ORDER[x.level] - ORDER[y.level]);
+    return `<div class="a3-cell" data-c="${code}"><span class="a3-cn">${esc(r.countries[code].name)}</span>${its.map(call).join("")}</div>`;
+  };
+  const row = (text, k, extra = "") => {
+    const has = cs.some((c) => place[c][k].length);
+    return `<div class="a3-row ${has ? "has" : ""} ${extra}"><div class="al-line">${esc(text)}</div>
+      ${has ? cs.map((c) => cell(c, k)).join("") : `<div class="al-none" style="grid-column: span ${cs.length}">今回の確認では、追加の指摘はありません</div>`}</div>`;
+  };
+  const head = cs.map((code) => {
+    const c = r.countries[code];
+    const v = c.verdict || { tier: "進められる見込み" };
+    const cls = { 入口で無理: "ol-stop", 現実的に厳しい: "ol-hard", 回避策がある: "ol-way", 進められる見込み: "ol-go" }[v.tier];
+    return `<div class="a3-head outlook ${cls}"><b>${esc(c.name)}</b><span class="tier">${esc(v.tier)}</span></div>`;
+  }).join("");
+  const more = rest.length ? `<p class="a3-rest">ほかの国も並べる：${rest.map((c) => `<button class="ghost nextc2" data-c="${c}">${COUNTRY_NAMES[c]}でチェックする</button>`).join("")}</p>` : "";
+  const photo = state.image ? `<details class="al-photo"><summary>元の写真と見比べる</summary><img src="data:${esc(state.mediaType)};base64,${state.image}" alt="ラベルの写真"></details>` : "";
+  $("#countryBody").innerHTML = `<p class="hint">同じラベルの行の横に、国ごとの指摘を並べました。行を押すと中身が開きます。くわしい理由と根拠は「チェック表で見る」で。</p>${more}${photo}
+    <div class="annot3" style="--n:${cs.length}">
+      <div class="a3-row a3-top"><div></div>${head}</div>
+      ${lines.map((l, k) => row(l, k)).join("")}
+      ${row("（ラベルに書いていない所・工場や手続きの話）", lines.length, "al-missing")}
+    </div>
+    <p class="legend"><span class="dot lv-stop"></span>出荷できない条件 <span class="dot lv-fix"></span>直す所 <span class="dot lv-ask"></span>確かめること <span class="dot lv-add"></span>輸出用ラベルで足す所</p>`;
+  document.querySelectorAll(".nextc2").forEach((b) => b.addEventListener("click", () => run(false, b.dataset.c)));
 }
 
 // 一番上の「見立てと次の一歩」（議論の結論 11/4：主役は輸出の可能性と次の一歩。確率は出さない）

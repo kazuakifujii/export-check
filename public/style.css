@@ -145,18 +145,6 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .guide { background: #faf9f6; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
 .guide p { margin: 2px 0; } .g-stop { color: var(--stop); } .g-fix { color: var(--fix); } .g-ask { color: var(--ask); }
 
-.opbtn { margin-left: 8px; }
-.onepager { position: fixed; inset: 0; background: #fff; overflow: auto; padding: 24px 32px; z-index: 50; }
-.op-tools { display: flex; gap: 8px; margin-bottom: 12px; } .op-tools .primary { margin-top: 0; }
-.op-head h2 { margin: 0 0 4px; } .op-head p { margin: 2px 0; font-size: 14px; }
-.op-grid { display: grid; gap: 16px; margin: 12px 0; }
-.op-col { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 13px; }
-.op-col h3 { margin: 0 0 4px; } .op-col h4 { margin: 10px 0 2px; font-size: 13px; } .op-col ul { margin: 0; padding-left: 1.2em; } .op-col small { color: var(--muted); }
-.op-count { font-weight: 700; margin: 0; }
-@media print {
-  body > *:not(.onepager) { display: none !important; }
-  .onepager { position: static; padding: 0; } .no-print { display: none !important; }
-}
 
 .viewsw { display: flex; gap: 6px; margin-bottom: 10px; } .viewsw .on { background: var(--ink); color: #fff; }
 .annot { display: grid; gap: 4px; }
@@ -183,3 +171,20 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .tier-s { font-size: 12px; background: var(--accent); color: #fff; border-radius: 10px; padding: 1px 8px; vertical-align: middle; }
 .more summary { font-size: 12px; color: var(--muted); } .more p { font-size: 12px; color: var(--muted); margin: 2px 0; }
 .way ul { margin: 2px 0; padding-left: 1.2em; } .remain { color: var(--fix); font-size: 12px; } .beyond { font-size: 14px; }
+
+/* ラベルに書き込んで見る：3か国を並べる */
+.annot3 { display: grid; gap: 4px; }
+.a3-row { display: grid; grid-template-columns: minmax(180px, 30%) repeat(var(--n), 1fr); gap: 6px; align-items: start; }
+.a3-top { position: sticky; top: 0; background: var(--bg, #fff); z-index: 2; padding: 4px 0; }
+.a3-head { padding: 6px 10px; margin: 0; display: flex; gap: 8px; align-items: center; }
+.a3-cell { min-height: 1em; }
+.a3-cn { display: none; font-size: 11px; color: var(--muted); }
+.a3-row.has .al-line { background: #fff3a8; }
+.annot3 .callout summary { cursor: pointer; list-style: none; }
+.annot3 .callout summary::-webkit-details-marker { display: none; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--c); margin-right: 6px; vertical-align: middle; }
+.legend { font-size: 12px; color: var(--muted); }
+.legend .dot { margin-left: 10px; }
+.a3-rest .ghost { margin-left: 6px; }
+@media (max-width: 900px) { .a3-row { grid-template-columns: 1fr; } .a3-top { display: none; } .a3-cn { display: block; } }
+.none-box { color: var(--ok); background: var(--ok-bg); border-radius: 6px; padding: 8px 10px; font-size: 14px; margin: 4px 0; }
