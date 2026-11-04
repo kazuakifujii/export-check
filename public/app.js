@@ -181,7 +181,7 @@ function renderCountry(c) {
   const f = state.filter;
   const chip = (lv, word) =>
     `<button class="chip ${LEVEL_CLASS[lv]} ${f === lv ? "on" : ""} ${f && f !== lv ? "dim" : ""}" data-lv="${lv}" title="押すと、これだけを表示します" ${s[lv] ? "" : "disabled"}>${word} ${s[lv]}</button>`;
-  let html = outlook(c) + `<div class="summary">
+  let html = outlook(c) + flowMap(c) + `<div class="summary">
     ${chip("出せない", "出荷できない条件")}${chip("直せば出せる", "直す所")}${chip("確認が必要", "確かめること")}
     <span class="sep"></span>${chip("輸出用に足す", "輸出用ラベルで足す所")}${chip("問題なし", "問題は見つかっていない")}${chip("対象外", "当てはまらない")}
     <span class="count">決まりノート ${c.noteRows}行のうち ${c.checkedRows}行を判定（判定日 ${esc(state.result.asOf)}）</span>
@@ -302,6 +302,7 @@ function renderCountry(c) {
     html += `<details class="na naall"><summary>この商品には当てはまらない項目 ${naAll.length}件（開く）</summary>
       <p class="hint">決まりノートの行は全部当てはめています。ここは、この商品には関係しないと判定した行です。</p>${naAll.map(card).join("")}</details>`;
   }
+  html += logicMap();
   html += `<datalist id="ansChoices"><option value="社内に聞きます"><option value="仕入先に聞きます"><option value="測っていません"><option value="まだ決まっていません"></datalist>`;
   $("#countryBody").innerHTML = html;
   document.querySelectorAll(".card").forEach((el) => {
@@ -652,6 +653,40 @@ function cnBand(c) {
   return `<div class="outlook usclass ${tone}"><span class="tier">中国：工場と原料の産地</span><p class="ol-main">${esc(head)}</p><p>${explain(o.why)}${asOf ? `（確認日 ${esc(asOf)}）` : ""}</p>${after}${way}
     <details class="more"><summary>対象の10都県を確かめる</summary><p>福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野。最後に加工した所か、主な原料（重さで一番多い原料）がここだと、工場が登録済みでも出せません。ほかの原料の産地は問われません（農林水産省の公表資料）。</p></details>
     ${ask ? `<div class="usask"><div class="qin"><label class="qf"><span>最後に加工した工場と、主な原料の都道府県</span><input data-q="主な原料の産地" placeholder="例：工場は静岡県、原料も静岡県" value="${esc(state.extraAnswers["主な原料の産地"] || "")}"></label></div><button class="primary rerun2">入れた内容で、もう一度チェックする</button></div>` : ""}</div>`;
+}
+
+// 判定のしくみの図（論理の組み立て）。読み取りはAI、決まりの当てはめはノートと固定のルール
+function logicMap() {
+  const box = (h, t) => `<div class="flow-step"><div class="flow-lane"><b>${h}</b><p class="hint">${t}</p></div></div>`;
+  const ar = `<div class="flow-arrow">→</div>`;
+  return `<details class="flow logic"><summary>この判定のしくみ</summary><div class="flow-row">
+    ${box("① ラベルを読む", "写真の文字をAI（Claude）が読み取ります")}${ar}
+    ${box("② 決まりノートと照合", "製品・この製品だから・施設の要件と入口の条件を、1行ずつ当てはめます")}${ar}
+    ${box("③ 数値と地名は固定のルール", "pH・水分活性、10都県などは、毎回同じ答えになるようプログラムで決めます")}${ar}
+    ${box("④ 根拠の確認", "根拠の文がラベルやノートに見つからない判定は「確かめること」に下げます")}${ar}
+    ${box("⑤ 見立てと次の一歩", "4つの見立てのどれかと、だれに何を確認するかをご案内します")}
+  </div></details>`;
+}
+
+// 進め方の図：同時に進められること（横に並ぶ）と、順番があること（矢印）を一目で（藤井さん 11/4）
+function flowMap(c) {
+  const live = c.items.filter((i) => !i.setup && i.level !== "対象外");
+  const qs = live.filter((i) => i.status === "分からない" && i.question);
+  const lane = (who) => qs.filter((i) => whoGroup(i.askWho, i.todoKind) === who);
+  const lanes = [["工場の品質管理の担当", "工場"], ["原料の仕入れ先", "仕入先"], ["相手の国の輸入者", "輸入者"], ["商社・倉庫", "商社・倉庫"]]
+    .map(([w, short]) => [short, lane(w)]).filter(([, l]) => l.length);
+  const reg = live.filter((i) => i.level === "直せば出せる" && ["施設", "交差", "入口"].includes(i.box));
+  const label = live.filter((i) => i.box === "製品" && ["直せば出せる", "輸出用に足す"].includes(i.level));
+  const setup = c.items.filter((i) => i.setup);
+  const chips = (arr, n = 3) => arr.slice(0, n).map((i) => `<li>${explain(plainTitle(i.title))}</li>`).join("") + (arr.length > n ? `<li class="more">ほか${arr.length - n}件</li>` : "");
+  if (!lanes.length && !reg.length && !label.length) return "";
+  return `<details class="flow" open><summary>進め方の図（同時に進められること・順番があること）</summary>
+    <div class="flow-row">
+      ${lanes.length ? `<div class="flow-step"><div class="flow-h"><span class="step">1</span>同時に確認できます</div><div class="flow-lanes">${lanes.map(([n, l]) => `<div class="flow-lane"><b>${esc(n)}に確認</b><ul>${chips(l, 2)}</ul></div>`).join("")}</div></div><div class="flow-arrow">→</div>` : ""}
+      ${reg.length ? `<div class="flow-step"><div class="flow-h"><span class="step">${lanes.length ? 2 : 1}</span>答えが出たら、登録・届け出</div><div class="flow-lane"><ul>${chips(reg)}</ul><p class="hint">確認の結果で、要るかどうかが決まります。</p></div></div><div class="flow-arrow">→</div>` : ""}
+      <div class="flow-step"><div class="flow-h"><span class="step">${1 + (lanes.length ? 1 : 0) + (reg.length ? 1 : 0)}</span>輸出用のラベルを作る</div><div class="flow-lane"><ul>${chips(label)}</ul><p class="hint">原料や製法が決まってから作ると、作り直しが減ります。</p></div></div>
+      ${setup.length ? `<div class="flow-arrow">→</div><div class="flow-step flow-last"><div class="flow-h"><span class="step">${2 + (lanes.length ? 1 : 0) + (reg.length ? 1 : 0)}</span>輸出を決めたら、出荷の段取り</div><div class="flow-lane"><ul><li>${setup.length}件（下の欄）</li></ul><p class="hint">Claudeに順番表を作ってもらえます。</p></div></div>` : ""}
+    </div></details>`;
 }
 
 // 一番上の「見立てと次の一歩」（議論の結論 11/4：主役は輸出の可能性と次の一歩。確率は出さない）

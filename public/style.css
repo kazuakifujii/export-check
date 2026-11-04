@@ -197,3 +197,16 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .usclass .qf input { min-width: 280px; }
 .qsw { margin-top: 12px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; } .qsw .on { background: #222; color: #fff; } .btag { display: inline-block; font-size: 11px; border: 1px solid var(--line); border-radius: 8px; padding: 0 6px; margin-right: 6px; color: var(--muted); vertical-align: middle; }
 .btag { color: #555; background: #f1f2f4; border-color: #e1e3e6; } .qrest > summary { cursor: pointer; margin-top: 12px; color: var(--accent); font-weight: 600; }
+
+/* 進め方の図 */
+.flow { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+.flow > summary { cursor: pointer; font-weight: 700; }
+.flow-row { display: flex; align-items: stretch; gap: 6px; margin-top: 10px; overflow-x: auto; }
+.flow-step { flex: 1 1 0; min-width: 170px; display: flex; flex-direction: column; gap: 6px; }
+.flow-h { font-weight: 700; font-size: 13px; display: flex; gap: 6px; align-items: center; }
+.flow-lanes { display: flex; flex-direction: column; gap: 6px; }
+.flow-lane { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: 6px 8px; font-size: 13px; background: #fbfaf7; }
+.flow-lane ul { margin: 2px 0 0; padding-left: 1.1em; } .flow-lane .more { color: var(--muted); list-style: none; margin-left: -1.1em; }
+.flow-last .flow-lane { border-left-color: var(--muted); }
+.flow-arrow { align-self: center; font-size: 22px; color: var(--accent); }
+@media (max-width: 760px) { .flow-row { flex-direction: column; } .flow-arrow { transform: rotate(90deg); } }
