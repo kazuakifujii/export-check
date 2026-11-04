@@ -242,8 +242,8 @@ function renderCountry(c) {
     const decided = c.items.length - qs.length;
     const rest = qs.length - firstThree.length;
     html += `<section class="questions"><h3>次に確かめること</h3>
-      <p class="progress">まずこの${firstThree.length}件です${rest > 0 ? `（残り${rest}件）` : ""}。答えると、ほかの行も一緒に決まりやすい順に並べています。</p>
-      <p class="hint">一人で全部答えなくて大丈夫です。分かる人に聞いて、分かった所から入れてください。「社内に聞きます」「まだ決まっていません」のように答えても進めます。点線の下線の言葉は、マウスを乗せると意味が出ます。</p>
+      <p class="progress">まずこの${firstThree.length}件です${rest > 0 ? `（残り${rest}件）` : ""}。</p>
+      <p class="hint">一人で全部答えなくて大丈夫。分かった所から入れてください。</p>
       ${firstHtml}
       ${rest > 0 ? `<p class="hint" style="margin-top:12px">残りは、聞く相手ごとにまとめています。</p>` : ""}
       ${rowsHtml}
@@ -366,15 +366,15 @@ function whoGroup(askWho, todoKind) {
 function conceptMap() {
   return `<figure class="concept">
     <p class="concept-lead">ラベルを直せば出せる、とは限りません。この3つをセットで見ないと、見落とします。</p>
-    <div class="cbox c-製品"><b>製品の要件</b><small>同じ商品でも、国によって決まりが違います。ラベルと原料を、出す国に合わせます</small>
+    <div class="cbox c-製品"><b>製品の要件</b><small>国によって決まりが違う。ラベルと原料を合わせる</small>
       <ul><li>アレルゲンの対象が国ごとに違う（米国はごま、EUはセロリ・からしも）</li><li>日本で使える添加物・着色料が、使えない国がある</li><li>栄養成分の表示の様式が国ごとに違う</li></ul></div>
     <div class="carrow">→</div>
-    <div class="cbox c-交差"><b>この製品だから必要な要件</b><small>ラベルの表示の話ではなく、原料や作り方によって、工場・仕入先・流通に求められることです。ラベルだけ、工場だけでは気づきません</small>
+    <div class="cbox c-交差"><b>この製品だから必要な要件</b><small>ラベルではなく、原料や作り方で工場・仕入先に求められること</small>
       <ul><li>常温のレトルトは、米国で殺菌工程の届け出が要ることがある</li><li>鰹節入りは、EUの認定施設の鰹節が要ることがある</li></ul></div>
     <div class="carrow">←</div>
-    <div class="cbox c-施設"><b>施設の要件</b><small>作る・包む・保管する場所に、国ごとに要る準備です。要る国と要らない国があります</small>
+    <div class="cbox c-施設"><b>施設の要件</b><small>作る・保管する場所の準備。要る国と要らない国がある</small>
       <ul><li>工場の登録が要る国がある（米国・中国など）</li><li>ラベルを貼るだけの倉庫も、登録が要ることがある</li><li>衛生管理の計画や、出荷ごとの届け出</li></ul></div>
-    <figcaption>チャットのAIにラベルを見せて聞くと、書いてある物だけを確かめ、欄ごと無い項目や真ん中の決まりを見落としがちです。だからこの道具は、決まりノートの行を<strong>1行も飛ばさず</strong>全部当てはめます（ノートに無い決まりは見られません）。</figcaption>
+    <figcaption>チャットのAIに聞くだけだと、書いてある物しか見ず、真ん中の決まりを見落としがちです。この道具は、決まりノートの行を<strong>1行も飛ばさず</strong>当てはめます。</figcaption>
   </figure>`;
 }
 $("#conceptHead").innerHTML = conceptMap();
@@ -493,22 +493,31 @@ function renderAnnotated(c) {
 }
 
 // 一番上の「見立てと次の一歩」（議論の結論 11/4：主役は輸出の可能性と次の一歩。確率は出さない）
+// 回避策の短い形：①②③ごとに、かっこの前だけ。くわしい注意は開いたら見える
+function shortWays(w) {
+  const parts = String(w || "").split(/(?=[①②③④⑤])/).map((x) => x.trim()).filter(Boolean);
+  return parts.filter((x) => !/^相談先/.test(x)).map((x) => x.replace(/[（(].*$/s, "").replace(/。.*$/s, "").trim()).filter(Boolean).slice(0, 3);
+}
 function outlook(c) {
   const name = esc(c.name);
   const v = c.verdict || { tier: "進められる見込み", items: [] };
   const qs = c.items.filter((i) => i.status === "分からない" && i.question).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
   const q0 = qs[0];
-  const first = q0 ? `<p><b>まず確かめること：</b>${explain(q0.question)}（${esc(whoGroup(q0.askWho, q0.todoKind))}へ）。結果によって、進められるか、何を変えるかが分かります。</p>` : "";
-  const li = (x, withWay) => `<li><b>${explain(plainTitle(x.title))}</b>${x.reason ? `<div class="why">${explain(x.reason)}</div>` : ""}${withWay && x.workaround ? `<div class="way"><b>回避策：</b>${explain(x.workaround)}</div>` : ""}</li>`;
   const MSG = {
-    入口で無理: [`ol-stop`, `${name}へは、この商品は入口で止まります。`, `国として受け入れを止めている条件に当たります。今のところ回避策は見つかっていません。ほかの国を検討しましょう。`],
-    現実的に厳しい: [`ol-hard`, `${name}へは、現実的に厳しい条件があります。`, `制度の上では道があっても、今のところ現実的な回避策が見つかっていない条件です。進めるなら、輸入者や専門家と、できるかどうかから相談しましょう。`],
-    回避策がある: [`ol-way`, `${name}へは、このままでは進めませんが、回避策があります。`, `下の回避策を取れるか、代わりに何が起きるかを含めて、社内と輸入者で相談しましょう。`],
-    進められる見込み: [`ol-go`, `${name}への輸出は、進められる見込みです。`, `今回確認した範囲では、輸出を妨げる条件は見つかっていません。下の「直す所」と「確かめること」を片づけていきましょう。`],
+    入口で無理: ["ol-stop", `${name}へは、出せません。`, "国として受け入れを止めている条件に当たります。"],
+    現実的に厳しい: ["ol-hard", `${name}へは、かなり難しいです。`, "今のところ、現実的な回避策が見つかっていません。"],
+    回避策がある: ["ol-way", `${name}へは、このままでは出せません。でも回避策があります。`, ""],
+    進められる見込み: ["ol-go", `${name}へは、進められそうです。`, "下の「直す所」と「確かめること」を片づけましょう。"],
   }[v.tier];
+  const li = (x) => {
+    const ways = v.tier === "回避策がある" ? shortWays(x.workaround) : [];
+    return `<li><b>${explain(plainTitle(x.title))}</b>
+      ${ways.length ? `<div class="way">回避策：${ways.map((w) => explain(w)).join("／")}</div>` : ""}
+      <details class="more"><summary>くわしく</summary>${x.reason ? `<p>${explain(x.reason)}</p>` : ""}${x.workaround ? `<p>${explain(x.workaround)}</p>` : ""}</details></li>`;
+  };
   return `<div class="outlook ${MSG[0]}"><span class="tier">${esc(v.tier)}</span>
-    <p class="ol-main">${MSG[1]}</p><p>${MSG[2]}</p>
-    ${v.items.length ? `<ul class="ol-list">${v.items.map((x) => li(x, v.tier === "回避策がある")).join("")}</ul>` : ""}
-    ${first}
-    <p class="hint">この結果は輸出相談の準備用です。未確認の条件もあるため、出荷前に輸入者と最終確認してください。</p></div>`;
+    <p class="ol-main">${MSG[1]}</p>${MSG[2] ? `<p>${MSG[2]}</p>` : ""}
+    ${v.items.length ? `<ul class="ol-list">${v.items.map(li).join("")}</ul>` : ""}
+    ${q0 ? `<p><b>まず確かめること：</b>${explain(q0.question)}（${esc(whoGroup(q0.askWho, q0.todoKind))}へ）</p>` : ""}
+    <p class="hint">相談の準備用です。出荷の前に、輸入者と確かめてください。</p></div>`;
 }
