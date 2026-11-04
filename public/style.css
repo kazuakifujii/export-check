@@ -99,3 +99,10 @@ table.note td.src { color: var(--muted); max-width: 280px; word-break: break-all
 }
 
 .next { margin-left: auto; font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+button.chip { border: 1px solid transparent; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; }
+button.chip:hover { border-color: var(--c); }
+button.chip.on { border-color: var(--c); box-shadow: 0 0 0 2px var(--cb), 0 0 0 3px var(--c); }
+button.chip.dim { opacity: .45; }
+.ctab .mini { cursor: pointer; } .ctab .mini:hover { outline: 2px solid #fff; }
+.filterbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; font-size: 14px; font-weight: 600; }
+button.chip:disabled { cursor: default; opacity: .5; }

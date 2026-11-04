@@ -80,6 +80,7 @@ async function run(reread, country) {
     const r = await post("/api/check", { label: state.label, countries: [country], answers: collectAnswers(), asOf: $("#asOf").value });
     state.result = { ...r, countries: { ...(state.result?.countries || {}), ...r.countries } };
     state.country = country;
+    state.filter = null;
     renderResult();
     setStatus("");
     $("#result").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -134,7 +135,7 @@ function renderResult() {
     .map((c) => {
       const s = r.countries[c].summary;
       return `<button class="ctab ${c === state.country ? "active" : ""}" data-c="${c}">${esc(r.countries[c].name)}
-        <span class="mini lv-stop">${s["出せない"]}</span><span class="mini lv-fix">${s["直せば出せる"]}</span><span class="mini lv-ask">${s["確認が必要"]}</span></button>`;
+        <span class="mini lv-stop" data-lv="出せない" title="押すと、出せない所だけを表示">${s["出せない"]}</span><span class="mini lv-fix" data-lv="直せば出せる" title="押すと、直す所だけを表示">${s["直せば出せる"]}</span><span class="mini lv-ask" data-lv="確認が必要" title="押すと、確認が必要な所だけを表示">${s["確認が必要"]}</span></button>`;
     })
     .join("");
   const rest = Object.keys(COUNTRY_NAMES).filter((c) => !cs.includes(c));
@@ -143,20 +144,18 @@ function renderResult() {
       .map((c) => `<button class="ghost nextc" data-c="${c}">${COUNTRY_NAMES[c]}</button>`)
       .join("")}</span>`;
   }
-  document.querySelectorAll(".ctab").forEach((b) => b.addEventListener("click", () => { state.country = b.dataset.c; renderResult(); }));
+  document.querySelectorAll(".ctab").forEach((b) => b.addEventListener("click", () => { state.country = b.dataset.c; state.filter = null; renderResult(); }));
   document.querySelectorAll(".nextc").forEach((b) => b.addEventListener("click", () => run(false, b.dataset.c)));
   renderCountry(r.countries[state.country]);
 }
 
 function renderCountry(c) {
   const s = c.summary;
+  const f = state.filter;
+  const chip = (lv, word) =>
+    `<button class="chip ${LEVEL_CLASS[lv]} ${f === lv ? "on" : ""} ${f && f !== lv ? "dim" : ""}" data-lv="${lv}" title="押すと、これだけを表示します" ${s[lv] ? "" : "disabled"}>${word} ${s[lv]}</button>`;
   let html = `<div class="summary">
-    <span class="chip lv-stop">出せない ${s["出せない"]}</span>
-    <span class="chip lv-fix">直す所あり ${s["直せば出せる"]}</span>
-    <span class="chip lv-ask">確認が必要 ${s["確認が必要"]}</span>
-    <span class="chip lv-add">輸出用に足す ${s["輸出用に足す"]}</span>
-    <span class="chip lv-ok">見た範囲では問題なし ${s["問題なし"]}</span>
-    <span class="chip lv-na">対象外 ${s["対象外"]}</span>
+    ${chip("出せない", "出せない")}${chip("直せば出せる", "直す所あり")}${chip("確認が必要", "確認が必要")}${chip("輸出用に足す", "輸出用に足す")}${chip("問題なし", "見た範囲では問題なし")}${chip("対象外", "対象外")}
     <span class="count">決まりノート ${c.noteRows}行のうち ${c.checkedRows}行を判定（判定日 ${esc(state.result.asOf)}）</span>
   </div>`;
 
@@ -165,10 +164,18 @@ function renderCountry(c) {
       <br>産地を変えない限り、この国には出せません。下の行は参考として見てください。</div>`;
   }
 
+  if (f) {
+    html += `<div class="filterbar">「${esc(levelWord(f))}」だけを表示しています（${s[f]}件） <button class="ghost" id="showAll">すべて表示に戻す</button></div>`;
+  }
   html += `<div class="boxes">`;
   for (const [key, name, sub] of BOX_ORDER) {
     const items = c.items.filter((i) => i.box === key);
     if (!items.length) continue;
+    if (f) {
+      const only = items.filter((i) => i.level === f);
+      if (only.length) html += `<section class="box box-${key}"><h3>${name}<small>${sub}</small></h3>${only.map(card).join("")}</section>`;
+      continue;
+    }
     const order = ["出せない", "直せば出せる", "確認が必要", "問題なし"];
     const shown = items.filter((i) => order.includes(i.level)).sort((a, b) => order.indexOf(a.level) - order.indexOf(b.level));
     const add = items.filter((i) => i.level === "輸出用に足す");
@@ -263,3 +270,21 @@ function renderNote(q) {
     .map((r) => `<tr><td>${esc(r.id)}</td><td>${names[r.country] || ""}</td><td>${esc(r.box)}</td><td>${esc(r.title)}</td><td>${esc(r.condition)}</td><td>${esc(r.exception)}</td><td>${esc(r.labelOrQuestion)}</td><td><span class="badge ${LEVEL_CLASS[r.level]}">${esc(r.level)}</span> ${esc(r.ifMissing)}</td><td class="src">${esc(r.source)}</td></tr>`)
     .join("")}</tbody></table>`;
 }
+
+// 件数の丸（国のタブ・まとめの札）を押すと、その段階の行だけを表示する。もう一度押すと元に戻る
+document.addEventListener("click", (e) => {
+  const chip = e.target.closest(".summary .chip[data-lv]");
+  const mini = e.target.closest(".ctab .mini[data-lv]");
+  const all = e.target.closest("#showAll");
+  if (!chip && !mini && !all) return;
+  if (mini) {
+    e.stopPropagation();
+    state.country = mini.closest(".ctab").dataset.c;
+    state.filter = mini.dataset.lv;
+  } else if (chip) {
+    state.filter = state.filter === chip.dataset.lv ? null : chip.dataset.lv;
+  } else {
+    state.filter = null;
+  }
+  renderResult();
+}, true);
