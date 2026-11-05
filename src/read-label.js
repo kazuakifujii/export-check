@@ -72,14 +72,31 @@ export async function readLabelImage({ base64, mediaType }) {
 }
 
 // 文字で渡されたラベル（試験データなど）は、そのまま行に分ける
+// 一括表示の項目名（「名称：値」のほか、「名称 値」「名称」の次の行に値、の形も読む）
+const KNOWN = ["品名・名称", "名称", "品名", "商品名", "種類別", "原材料名", "原材料", "添加物", "内容量", "固形量", "賞味期限", "消費期限", "保存方法", "製造者", "製造所", "販売者", "加工者", "加工所", "輸入者", "原産国名", "原料原産地名", "殺菌方法", "密封方法", "使用上の注意", "調理方法"];
+const KNOWN_RE = new RegExp("^(" + KNOWN.map((k) => k.split("").join("\\s*")).join("|") + ")(?:[：:]\\s*|\\s+|$)(.*)$");
 export function readLabelText(text) {
   const lines = text
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
   const fields = [];
-  for (const l of lines) {
-    const m = l.replace(/^[●・■◆○\-\s]+/, "").match(/^([^：:]{1,12})[：:]\s*(.*)$/);
+  for (let k = 0; k < lines.length; k++) {
+    const l = lines[k].replace(/^[●・■◆○\-\s]+/, "").replace(/^【([^】]{1,12})】\s*/, "$1 ");
+    const known = l.match(KNOWN_RE);
+    if (known) {
+      const name = known[1].replace(/\s/g, "").replace("品名・名称", "名称").replace("商品名", "品名");
+      let value = known[2].trim();
+      // 値が次の行にある形（「名称」の行のあとに値）
+      if (!value && k + 1 < lines.length && !KNOWN_RE.test(lines[k + 1].replace(/^【([^】]{1,12})】\s*/, "$1 "))) value = lines[++k];
+      if (name === "製造者" || name === "販売者" || name === "製造所" || name === "加工者") {
+        // 住所が次の行に分かれている時は足す
+        if (k + 1 < lines.length && !KNOWN_RE.test(lines[k + 1]) && /[都道府県市区町村]/.test(lines[k + 1])) value += " " + lines[++k];
+      }
+      fields.push({ name, value });
+      continue;
+    }
+    const m = l.match(/^([^：:]{1,12})[：:]\s*(.*)$/);
     if (m) fields.push({ name: m[1].replace(/\s/g, ""), value: m[2].trim() });
   }
   return normalizeLabel({ lines, fields, unreadable: [] });

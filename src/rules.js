@@ -237,8 +237,10 @@ function isJuiceDrink(name, ingredients) {
   return /飲料|ドリンク/.test(name) && /果汁|ストレート|濃縮還元|ピューレ/.test(first) && !/ぶどう糖/.test(first);
 }
 function usCannedClassCore(label, answers = {}) {
-  const storage = [answers["保存"] || "", fieldValue(label, "保存方法")].join(" ");
-  const sterilize = [answers["殺菌"] || "", fieldValue(label, "殺菌方法"), answers["容器"] || ""].join(" ");
+  // 「開封後は冷蔵」は流通の温度ではないので外す
+  const storage = [answers["保存"] || "", fieldValue(label, "保存方法").replace(/開封後[^。]*。?/g, "")].join(" ");
+  const sealedLine = (label.lines || []).filter((l) => /気密性容器|加圧加熱|レトルトパウチ|缶詰|びん詰|瓶詰|密封/.test(l)).join(" ");
+  const sterilize = [answers["殺菌"] || "", fieldValue(label, "殺菌方法"), fieldValue(label, "密封方法"), sealedLine, answers["容器"] || ""].join(" ");
   const name = [fieldValue(label, "名称"), fieldValue(label, "品名"), fieldValue(label, "種類別")].join(" ").trim();
   const ingredients = fieldValue(label, "原材料名") || (label.lines || []).join(" ");
   const pH = num(answers["pH"]);
@@ -281,8 +283,8 @@ function usCannedClassCore(label, answers = {}) {
 // EUの見せ場：動物由来の原料（決まりノート EU-X1・EU-F1）。割合による免除は無い
 const NF = "(?!風味|香料|フレーバー|味)";
 const EU_ANIMAL = [
-  [/宗田かつお節|宗田節/, "宗田かつお節"], [/かつお節|鰹節|かつおぶし|かれぶし|削りぶし|かつお粉/, "かつお節"],
-  [/さば節|まぐろ節|むろあじ節|いわし節|混合節|雑節/, "ほかの節"], [/煮干|にぼし|いりこ|あご(だし)?(?![a-z])/, "煮干し・いりこ・あご"],
+  [/宗田かつお節|宗田節/, "宗田かつお節"], [/かつお節|鰹節|かつおぶし|かつおふし|かれぶし|削りぶし|かつお粉/, "かつお節"],
+  [/さば節|まぐろ節|むろあじ節|いわし節|さばふし|いわしふし|むろあじふし|混合節|雑節/, "ほかの節"], [/煮干|にぼし|いりこ|あご(だし)?(?![a-z])/, "煮干し・いりこ・あご"],
   [new RegExp("(かつお|鰹|魚介|ほたて|えび|かに|いか|さば|いわし|あさり|かき|しじみ|昆布かつお)(エキス|だし|パウダー)" + NF), "魚介のエキス・だし"],
   [/オイスターソース|魚醤|ナンプラー|いしる|しょっつる/, "魚介の調味料"],
   [/かつお(?!節|ぶし|粉|だし|エキス)|鰹(?!節)|ちりめん|しらす|(?<!小)えび|海老|(?<![いた])いか(?!り)|たこ|魚肉|かまぼこ|すり身|魚油|フィッシュコラーゲン|魚コラーゲン|かにかま|なると|数の子|^あさり$|^かき$|いくら|たらこ|明太|魚卵|さけ(?!る)|鮭|まぐろ(?!節)|さば(?!節)/, "魚介"],
