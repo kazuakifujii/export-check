@@ -266,7 +266,13 @@ export function verdictOf(items, bands = {}) {
       // 米国の缶詰・レトルトの区分が低酸性・酸性化食品（見込みを含む）なら、見立てに必ず出す（見せ場）
       (usClass && i.level !== "対象外" && ((usClass.cls === "低酸性缶詰食品" && i.rowId === "US-X1") || (usClass.cls === "酸性化食品" && i.rowId === "US-X2"))),
   );
-  const add = (i) => { if (i && !blocking.some((b) => b.rowId === i.rowId)) blocking.push(i); };
+  // 帯から足す行は、AIが同じ行を別の形（回避策つきなど）で返していても、帯の結論で置き換える
+  const add = (i) => {
+    if (!i) return;
+    const k = blocking.findIndex((b) => b.rowId === i.rowId);
+    if (k >= 0) blocking[k] = i;
+    else blocking.push(i);
+  };
   // EU：動物由来の原料が見つかったら、帯（認められた工場の物しか使えない）と見立てをそろえる
   if (euAnimal?.found?.length) {
     const r = row("EU-X1");
