@@ -198,16 +198,23 @@ export async function runCheck({ label, countries, answers = {}, asOf, judge = j
     const origin = c === "CN" ? items.find((i) => i.rowId === "0-1") : null;
     const stoppedAtEntry = origin && origin.status === "無い" ? origin : null;
 
+    // 見せ場の帯（米国の缶詰・レトルトの区分、EUの動物由来の原料、中国の産地）。見立てと食い違わないよう、見立てにも渡す
+    const bands = {
+      usClass: c === "US" ? usCannedClass(label, answers) : null,
+      euAnimal: c === "EU" ? euAnimalBand(label) : null,
+      cnOrigin: c === "CN" ? cnOriginBand(label, answers) : null,
+    };
+
     out.countries[c] = {
       name: COUNTRIES[c],
       stoppedAtEntry,
       items,
       summary: summarize(items),
       tomorrow: tomorrowList(items),
-      usClass: c === "US" ? usCannedClass(label, answers) : null,
-      euAnimal: c === "EU" ? euAnimalBand(label) : null,
-      cnOrigin: c === "CN" ? cnOriginBand(label, answers) : null,
-      verdict: verdictOf(items, c === "US" ? usCannedClass(label, answers) : null),
+      usClass: bands.usClass,
+      euAnimal: bands.euAnimal,
+      cnOrigin: bands.cnOrigin,
+      verdict: verdictOf(items, bands),
       ifStopped: ifStoppedList(items),
       checkedRows: items.length,
       noteRows: rows.length,
@@ -244,7 +251,11 @@ function ifStoppedList(items) {
 }
 
 // 一番上の見立て（藤井さんの決定 11/4）：入口で無理／現実的に厳しい／回避策がある／進められる見込み
-export function verdictOf(items, usClass = null) {
+export function verdictOf(items, bands = {}) {
+  // 以前は第2引数に米国の区分だけを渡していた。その形も受ける
+  if (bands && "cls" in bands) bands = { usClass: bands };
+  const { usClass = null, euAnimal = null, cnOrigin = null } = bands || {};
+  const row = (id) => items.find((i) => i.rowId === id && i.level !== "対象外");
   // 出荷できない条件と、「現実的に厳しい」印の行。加えて、この製品だから必要な要件・入口で、
   // 手続きの負担が大きく回避策のある行（例：米国の低酸性食品→冷蔵で流通）も、見立ての対象にする
   const blocking = items.filter(
@@ -255,10 +266,30 @@ export function verdictOf(items, usClass = null) {
       // 米国の缶詰・レトルトの区分が低酸性・酸性化食品（見込みを含む）なら、見立てに必ず出す（見せ場）
       (usClass && i.level !== "対象外" && ((usClass.cls === "低酸性缶詰食品" && i.rowId === "US-X1") || (usClass.cls === "酸性化食品" && i.rowId === "US-X2"))),
   );
-  if (!blocking.length) return { tier: "進められる見込み", items: [] };
+  const add = (i) => { if (i && !blocking.some((b) => b.rowId === i.rowId)) blocking.push(i); };
+  // EU：動物由来の原料が見つかったら、帯（認められた工場の物しか使えない）と見立てをそろえる
+  if (euAnimal?.found?.length) {
+    const r = row("EU-X1");
+    if (r) add({ ...r, workaround: r.workaround || "①EU向けに認められた工場で作った原料に切り替える【残る：仕入先の確認と証明書】" });
+    else add({
+      rowId: "EU-X1", box: "交差", title: "混合食品：中の動物性加工原料はEU認定施設由来",
+      reason: `${euAnimal.found.join("、")}は、EU向けに認められた工場で作った物しか使えません。`,
+      workaround: "①EU向けに認められた工場で作った原料に切り替える【残る：仕入先の確認と証明書】",
+    });
+  }
+  // 中国：工場か主な原料が10都県なら、この産地のままでは出せない（帯と同じ結論にする）
+  if (cnOrigin?.state === "止まる") {
+    const r = row("0-1");
+    add({ ...(r || {}), rowId: "0-1", box: "入口", workaround: "", title: r?.title || "中国：日本の10都県産は食品・飼料の輸入停止", reason: cnOrigin.why });
+  }
+  const pick = (arr) => arr.map((i) => ({ rowId: i.rowId, title: (i.title || "").replace(/\*\*/g, ""), reason: i.reason, workaround: i.workaround, hard: i.hard }));
+  if (!blocking.length) {
+    // 中国で産地がまだ分からない時は「進められる見込み」とは言わない（産地しだいで結論が変わるため）
+    if (cnOrigin && cnOrigin.state !== "10都県の外") return { tier: "産地しだい", items: [] };
+    return { tier: "進められる見込み", items: [] };
+  }
   const noWay = blocking.filter((i) => !i.workaround);
   const entry = noWay.filter((i) => i.box === "入口");
-  const pick = (arr) => arr.map((i) => ({ rowId: i.rowId, title: i.title.replace(/\*\*/g, ""), reason: i.reason, workaround: i.workaround, hard: i.hard }));
   if (entry.length) return { tier: "入口で無理", items: pick(entry) };
   if (noWay.length) return { tier: "現実的に厳しい", items: pick(noWay) };
   return { tier: "回避策がある", items: pick(blocking) };

@@ -170,3 +170,14 @@ test("EU：不使用・風味は拾わない", () => {
   assert.deepEqual(f("えび風味スナック"), []);
   assert.deepEqual(f("かつお菜、しょうゆ"), []);
 });
+
+test("見立てを帯とそろえる（EUの動物由来、中国の産地）", async () => {
+  const { verdictOf } = await import("../src/check.js");
+  const it = (o) => ({ rowId: "X", title: "t", level: "問題なし", box: "製品", ...o });
+  assert.equal(verdictOf([it({})], { euAnimal: { found: ["かつお節"] } }).tier, "回避策がある");
+  assert.equal(verdictOf([it({})], { euAnimal: { found: [] } }).tier, "進められる見込み");
+  assert.equal(verdictOf([it({})], { cnOrigin: { state: "止まる", why: "東京" } }).tier, "入口で無理");
+  assert.equal(verdictOf([it({})], { cnOrigin: { state: "分からない" } }).tier, "産地しだい");
+  assert.equal(verdictOf([it({})], { cnOrigin: { state: "10都県の外" } }).tier, "進められる見込み");
+  assert.equal(verdictOf([it({})], { cls: "対象外" }).tier, "進められる見込み");
+});

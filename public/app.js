@@ -118,7 +118,7 @@ const LEVEL_WORD = {
 };
 const levelWord = (l) => LEVEL_WORD[l] || l;
 // 見立ての表示の言葉（中の判定名とは分ける。議論 11/4：気持ちをくじかない言い方に）
-const TIER_WORD = { 入口で無理: "今の条件では輸出できません", 現実的に厳しい: "大きな課題があります", 回避策がある: "回避策を検討できます", 進められる見込み: "進められる見込みです" };
+const TIER_WORD = { 入口で無理: "今の条件では輸出できません", 現実的に厳しい: "大きな課題があります", 回避策がある: "回避策を検討できます", 進められる見込み: "進められる見込みです", 産地しだい: "産地の確認しだいです" };
 const tierWord = (t) => TIER_WORD[t] || t;
 const LEVEL_CLASS = { 出せない: "lv-stop", 直せば出せる: "lv-fix", 確認が必要: "lv-ask", 輸出用に足す: "lv-add", 問題なし: "lv-ok", 対象外: "lv-na" };
 const BOX_ORDER = [
@@ -566,7 +566,7 @@ function renderAnnotated() {
   const head = cs.map((code) => {
     const c = r.countries[code];
     const v = c.verdict || { tier: "進められる見込み" };
-    const cls = { 入口で無理: "ol-stop", 現実的に厳しい: "ol-hard", 回避策がある: "ol-way", 進められる見込み: "ol-go" }[v.tier];
+    const cls = { 入口で無理: "ol-stop", 現実的に厳しい: "ol-hard", 回避策がある: "ol-way", 進められる見込み: "ol-go", 産地しだい: "ol-way" }[v.tier];
     const wall = (v.items || [])[0];
     return `<div class="a3-head outlook ${cls}"><div><b>${esc(c.name)}</b> <span class="tier">${esc(tierWord(v.tier))}</span></div>${wall ? `<div class="a3-wall">いちばんの壁：${explain(plainTitle(wall.title))}</div>` : ""}</div>`;
   }).join("");
@@ -717,17 +717,20 @@ function outlook(c) {
     現実的に厳しい: ["ol-hard", `${name}へは、大きな課題があります。`, "制度上の道はありますが、現実的な方法は見つかっていません。別の方法がないか、輸入者や窓口にご相談ください。"],
     回避策がある: ["ol-way", `${name}へは、このままでは出せませんが、回避策を検討できます。`, ""],
     進められる見込み: ["ol-go", `${name}へは、進められる見込みです。`, "確認した範囲では、大きな壁は見つかっていません。残る条件をご確認ください。"],
+    産地しだい: ["ol-way", `${name}へは、工場と主な原料の産地しだいです。`, "産地が10都県の外と分かれば、ほかに大きな壁は見つかっていません。"],
   }[v.tier];
   const li = (x) => {
-    const ways = v.tier === "回避策がある" ? shortWays(x.workaround) : [];
-    return `<li><b>${explain(plainTitle(x.title))}</b>
+    // 上の帯に回避策が出ている行（EUの動物由来の原料）は、同じ回避策を繰り返さない
+    const inBand = x.rowId === "EU-X1" && c.euAnimal?.found?.length;
+    const ways = v.tier === "回避策がある" && !inBand ? shortWays(x.workaround) : [];
+    return `<li><b>${explain(plainTitle(x.title))}</b>${inBand ? `<p>回避策は、上の「動物由来の原料」のとおりです。</p>` : ""}
       ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
       <details class="more"><summary>くわしく</summary>${x.reason ? `<p>${explain(x.reason)}</p>` : ""}${x.workaround ? `<p>${explain(x.workaround)}</p>` : ""}</details></li>`;
   };
   return usClassBand(c) + euBand(c) + cnBand(c) + `<div class="outlook ${MSG[0]}"><span class="tier">${esc(tierWord(v.tier))}</span>
     <p class="ol-main">${MSG[1]}</p>${MSG[2] ? `<p>${MSG[2]}</p>` : ""}
     ${v.items.length ? `<ul class="ol-list">${v.items.map(li).join("")}</ul>` : ""}
-    ${v.tier === "進められる見込み" && beyond.length ? `<p class="beyond"><b>ただし、ラベルのほかにも確かめたいことがあります：</b>${beyond.map((i) => explain(plainTitle(i.title))).join("、")}${beyondMore}</p>` : ""}
+    ${["進められる見込み", "産地しだい"].includes(v.tier) && beyond.length ? `<p class="beyond"><b>ただし、ラベルのほかにも確かめたいことがあります：</b>${beyond.map((i) => explain(plainTitle(i.title))).join("、")}${beyondMore}</p>` : ""}
     ${q0 ? `<p><b>最初に確かめたいこと：</b>${explain(q0.question)}（${esc(whoGroup(q0.askWho, q0.todoKind))}へ）</p>` : ""}
   </div>`;
 }
