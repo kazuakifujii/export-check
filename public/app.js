@@ -587,6 +587,24 @@ const US_CLASS_NEEDS = {
   低酸性缶詰食品: ["工場の登録（FCE）", "製品ごとの殺菌条件の届け出（SID）。条件は殺菌の専門家が決める", "工場に、FDAの講習（Better Process Control School）を受けた責任者を置く"],
   酸性化食品: ["工場の登録（FCE）", "製品ごとの工程の届け出（SID）。pHの管理と記録", "工場に、FDAの講習（Better Process Control School）を受けた責任者を置く"],
 };
+// 低酸性・酸性化食品の「道の選び方」（藤井さん 11/5：冷蔵流通は逃げ道ではなく、実際に選ばれている道）。
+// 常温のまま出す道と、米国向けだけ冷蔵で流通させる道を並べて比べる。冷蔵にすれば何でも通る、とは読ませない
+function pathCompare(af, others) {
+  const rowId = af ? "US-X2" : "US-X1";
+  const coldBasis = af ? "21 CFR 114.3(b) に、冷蔵で保管・流通・販売する物は対象外と書かれています。" : "FDAの手引き（LACF/AF – Precursor Questions and Flow、2016年）の最初の問いで、冷蔵・冷凍で保管・流通・販売する物は対象外とされています。";
+  return `<div class="paths"><b>道の選び方</b>（決まりノート ${rowId}）
+    <div class="paths-grid">
+      <div class="path"><div class="path-h">① 常温のまま出す</div>
+        <p>今の商品のまま出せます。</p>
+        <p class="path-need">必要なこと：工場の登録（FCE）、製品ごとの${af ? "工程" : "殺菌条件"}の届け出（SID）、講習を受けた責任者。工場側の準備が大きく、委託先の工場にも協力をお願いすることになります。</p></div>
+      <div class="path"><div class="path-h">② 米国向けだけ、冷蔵で流通させる</div>
+        <p>${af ? "酸性化食品" : "低酸性缶詰食品"}の手続きの対象から外れます。実際に、この形で輸出を続けている例があります。</p>
+        <p class="path-need">必要なこと：工場から米国の店頭まで冷蔵を切らさない物流（費用が上がります）、「要冷蔵」の表示、冷蔵での賞味期限の決め直し、温度の記録。引き受けてくれる輸入者がいるかを先にご相談ください。</p></div>
+    </div>
+    <p class="path-note">どちらの道でも、食品施設の登録（US-F1）など、ほかの決まりは変わらず必要です。冷蔵の道は、途中で常温に置く時間があると成り立ちません。根拠：${coldBasis}</p>
+    ${others.length ? `<p class="path-note"><b>ほかの道：</b>${others.map((w) => explain(w.head.replace(/^[①-⑨]\s*/, "")) + (w.remain ? `（残ること：${explain(w.remain)}）` : "")).join("／")}</p>` : ""}
+  </div>`;
+}
 function usClassBand(c) {
   const u = c.usClass;
   if (!u) return "";
@@ -603,7 +621,8 @@ function usClassBand(c) {
     農務省の管轄の見込み: "米国では、農務省（USDA）の管轄になる見込みです。",
     ジュースのHACCP: "米国では、ジュースのHACCPが当たります。",
   }[u.cls] || u.cls;
-  const burden = lacf || af ? `<p><b>当たる場合は：</b>工場の登録と、製品ごとの殺菌条件の届け出が必要です（手続きの負担が大きい）。</p>` : "";
+  // 当たる場合に要ることは、下の「道の選び方」の①で示す
+  const burden = "";
   const needs = US_CLASS_NEEDS[u.cls] || [];
   const row = c.items.find((i) => i.rowId === (af ? "US-X2" : "US-X1"));
   const ways = lacf || af ? shortWays(row?.workaround).map((w) => (/冷蔵/.test(w.head) ? { ...w, remain: [w.remain, "米国内の輸送・保管・店頭まで冷蔵を守れるか、輸入者に確かめるのが前提"].filter(Boolean).join("、") } : w)) : [];
@@ -612,7 +631,7 @@ function usClassBand(c) {
   return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p>${burden}${u.cls === "肉の量が先" ? `<p>${explain(u.why)}</p>` : ""}
     ${ask ? `<p><b>工場に確かめたいこと：</b>${u.needSealedQuestion ? "密封して加熱殺菌しているか、" : ""}完成品の pH と水分活性。ご入力いただくと、当たるかどうかが分かります。</p>` : ""}
     ${(u.also || []).length ? `<div class="way"><b>商品の種類で、ほかにも当たる決まり</b><ul>${u.also.map((a) => `<li>${explain(a)}</li>`).join("")}</ul></div>` : ""}
-    ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
+    ${lacf || af ? pathCompare(af, ways.filter((w) => !/冷蔵/.test(w.head))) : ""}
     <details class="more"><summary>くわしく</summary><p>${explain(u.why)}</p>${needs.length ? `<p><b>当たる場合に必要なもの</b></p><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul>` : ""}</details>
     ${ask ? `<div class="usask"><b>品質管理のご担当に確認のうえ、ご入力ください</b>（「この商品の完成品の pH と水分活性を教えてください」）
       <div class="qin">${u.needSealedQuestion ? `<label class="qf"><span>密封して加熱殺菌していますか</span><select data-q="密封・加熱殺菌"><option value=""></option>${["はい", "いいえ"].map((o) => `<option ${state.extraAnswers["密封・加熱殺菌"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label>` : ""}${inp("pH", "pH", "例：5.8")}${inp("Aw", "水分活性", "例：0.97")}<label class="qf"><span>工場から店までの温度</span><select data-q="保存"><option value=""></option>${["ずっと冷蔵", "途中で常温に置く時間がある", "常温"].map((o) => `<option ${state.extraAnswers["保存"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label></div>
