@@ -76,7 +76,7 @@ async function run(reread, country) {
       renderLabel();
       $("#result").hidden = false;
     }
-    setStatus(`${COUNTRY_NAMES[country]}の決まりノートを1行ずつ当てはめています… 1分ほどかかります`);
+    setStatus(`${COUNTRY_NAMES[country]}の決まりを、この商品に1項目ずつ当てはめています… 1分ほどかかります`);
     state.lastConcern = $("#concern").value.trim();
     const r = await post("/api/check", { label: state.label, countries: [country], answers: collectAnswers(), asOf: $("#asOf").value });
     state.result = { ...r, countries: { ...(state.result?.countries || {}), ...r.countries } };
@@ -191,9 +191,9 @@ function renderCountry(c) {
   const upN = upItems.length;
   const upList = upItems.slice(0, 4).map((i) => `${plainTitle(i.title).slice(0, 24)}（${i.upcoming.map((d) => d.date).join("・")}）`).join("、");
   let html = outlook(c) + `<div class="coverage">
-    <p><b>登録した決まり ${c.noteRows}行を、すべて照合しました（${c.checkedRows}/${c.noteRows}）。</b>
-    この商品に当てはまったのは${applied}行です。当てはまらなかった${s["対象外"] || 0}行も、下で開いて確かめられます。${s["確認が必要"] ? `<b>情報が足りない${s["確認が必要"]}行は、答えを作らずに「確かめること」にしています。</b>` : ""}</p>
-    <p class="split"><span class="tag ai">AI</span>食品表示の文字を読み取り、決まりの各行との対応を整理します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、プログラムの決まったルールで判定します。</p>
+    <p><b>${c.name}への輸出で確かめる決まり ${c.noteRows}項目を、すべてこの商品に当てはめました（${c.checkedRows}/${c.noteRows}）。</b>
+    この商品に関係するのは${applied}項目です。関係しない${s["対象外"] || 0}項目も、下で開いて確かめられます。${s["確認が必要"] ? `<b>情報が足りない${s["確認が必要"]}項目は、推測で答えを出さずに「確かめること」にしています。</b>` : ""}</p>
+    <p class="split"><span class="tag ai">AI</span>食品表示の文字を読み取り、各項目との対応を整理します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、毎回同じ基準で自動判定します。</p>
     ${upN ? `<p class="hint">これから変わる決まり ${upN}件：${esc(upList)}${upN > 4 ? " ほか" : ""}</p>` : ""}
     <p class="hint">決まりの確認日 ${esc(state.result.asOf)}。輸出相談の準備用です。出荷の前に、輸入者とご確認ください。</p>
   </div>${flowMap(c)}
@@ -206,12 +206,12 @@ function renderCountry(c) {
     ${s["出せない"] ? `<p><b class="g-stop">出荷できない条件があります（${s["出せない"]}）</b>　理由と、進むための条件をご確認ください。</p>` : ""}
     ${s["直せば出せる"] ? `<p><b class="g-fix">直す所があります（${s["直せば出せる"]}）</b>　表示の修正や、登録・証明書の準備です。直したあとで、もう一度確かめられます。</p>` : ""}
     ${s["確認が必要"] ? `<p><b class="g-ask">確かめること（${s["確認が必要"]}）</b>　どなたに聞けばよいかも、あわせてご案内します。</p>` : ""}
-    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが解決するまでは出荷を控え、輸入者への確認が必要です。</p>` : `<p class="hint">決まりノートで確認した範囲では、問題になる条件は見つかっていません。出荷の前に、輸入者や窓口とご確認ください。</p>`}
+    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが解決するまでは出荷を控え、輸入者への確認が必要です。</p>` : `<p class="hint">確認した範囲では、問題になる条件は見つかっていません。出荷の前に、輸入者や窓口とご確認ください。</p>`}
   </div>`;
 
   if (c.stoppedAtEntry) {
     html += `<div class="banner stop"><strong>この国に輸出できるか判断するために、確認が必要な条件があります。</strong>${esc(c.stoppedAtEntry.reason)}
-      <br>この産地のままでは、この国へは出荷できない条件があります。下の行は、産地を変えた場合の参考として見てください。</div>`;
+      <br>この産地のままでは、この国へは出荷できない条件があります。下の項目は、産地を変えた場合の参考としてご覧ください。</div>`;
   }
 
   if (f) {
@@ -309,13 +309,13 @@ function renderCountry(c) {
   const concern = state.lastConcern;
   if (concern) {
     html += `<section class="questions"><h3>お書きいただいた「気になること」</h3><p>${esc(concern)}</p>
-      <p class="hint">決まりノートの行に関係する所は、その行の判定の理由に書いています。ノートに無いことはこの道具では判定できないので、窓口（JETRO など）にご相談ください。</p></section>`;
+      <p class="hint">関係する決まりがある場合は、その項目の理由に書いています。このアプリで扱っていない決まりは判定できないため、窓口（JETRO など）への相談が必要です。</p></section>`;
   }
   // 当てはまらない決まりは、全部見た証拠として一番下に畳んで置く
   const naAll = c.items.filter((i) => i.level === "対象外");
   if (naAll.length && !f) {
     html += `<details class="na naall"><summary>この商品には当てはまらない項目 ${naAll.length}件（開く）</summary>
-      <p class="hint">決まりノートの行は全部当てはめています。ここは、この商品には関係しないと判定した行です。</p>${naAll.map(card).join("")}</details>`;
+      <p class="hint">すべての項目を当てはめたうえで、この商品には関係しないと判定した項目です。</p>${naAll.map(card).join("")}</details>`;
   }
   html += logicMap();
   html += `<datalist id="ansChoices"><option value="社内に聞きます"><option value="仕入先に聞きます"><option value="測っていません"><option value="まだ決まっていません"></datalist>`;
@@ -492,20 +492,29 @@ function conceptMap() {
     <div class="carrow">←</div>
     <div class="cbox c-施設"><b>施設の要件</b><small>製造・保管する施設の要件です。国によって要否が異なります</small>
       <span class="ex">例</span><ul class="exl"><li>工場の登録が要る国がある（米国・中国など）</li><li>ラベルを貼るだけの倉庫も、登録が要ることがある</li><li>衛生管理の計画や、出荷ごとの届け出</li></ul></div>
-    <figcaption>食品表示に書かれていない条件も含めて、決まりを1行ずつ照合します。</figcaption>
+    <figcaption>食品表示に書かれていない条件も含めて、決まりを1項目ずつ照合します。</figcaption>
   </figure>`;
 }
 $("#conceptHead").innerHTML = conceptMap();
 
+// 中のしるし（答え合わせでも使う）を、使う人向けの言い方に直して見せる
+function flagWord(f) {
+  if (f.startsWith("AIが答えなかった")) return "自動では判定できませんでした";
+  if (f.startsWith("決まりノートの行に、引用した文")) return "決まりの記載と照合できませんでした";
+  if (f.startsWith("答えに無い項目")) return "ご回答に無い情報を根拠にしていました";
+  if (f.startsWith("ラベルに無い言葉")) return "食品表示に無い言葉を根拠にしていました";
+  if (f.startsWith("ラベルにも答えにも")) return "食品表示にもご回答にも根拠が見つかりませんでした";
+  return f;
+}
 function card(i) {
   const up = i.upcoming.map((d) => `<span class="tag up">${esc(d.label)} ${esc(d.date)}</span>`).join("");
   const weak = i.weakSource ? `<span class="tag weak" title="出典は二次資料です。出荷前に窓口で確かめてください。${esc(i.marks.join(" "))}">二次資料</span>` : "";
   // ルールで決めた所と、AIが読んで照合した所を分けて見せる（議論 11/6）
   const prog = i.decidedBy === "program" ? `<span class="tag prog">ルールで判定</span>` : `<span class="tag ai">AIが読み取り、決まりと照合</span>`;
-  const flags = i.flags.length ? `<div class="flags">言い切れないので「確認が必要」にしました：${i.flags.map(esc).join("／")}</div>` : "";
+  const flags = i.flags.length ? `<div class="flags">自動では言い切れないため、「確かめること」にしています（${i.flags.map((f) => esc(flagWord(f))).join("／")}）</div>` : "";
   const quote = i.labelQuote ? `<div class="q-label">食品表示から読み取り（AI）：「${esc(i.labelQuote)}」</div>` : i.absentOnLabel ? `<div class="q-label">食品表示：この欄はありません（決まりの側から確認した項目です）</div>` : "";
   const answer = i.answerKeys.length ? `<div class="q-label">答え：${i.answerKeys.map(esc).join("、")}</div>` : "";
-  const nq = i.noteQuote ? `<div class="q-note">決まり（ノートの原文）：「${esc(i.noteQuote)}」</div>` : "";
+  const nq = i.noteQuote ? `<div class="q-note">決まりの記載：「${esc(i.noteQuote)}」</div>` : "";
   const link = i.urls[0] ? `<a href="${esc(i.urls[0])}" target="_blank" rel="noopener">根拠を見る</a>` : "";
   const way = i.workaround && ["出せない", "直せば出せる"].includes(i.level) ? `<div class="way"><b>回避策：</b>${explain(i.workaround)}</div>` : "";
   const hard = i.hard && ["出せない", "直せば出せる"].includes(i.level) ? `<span class="tag weak">現実的に厳しい</span>` : "";
@@ -524,7 +533,7 @@ function card(i) {
 let noteCache = null;
 async function loadNote() {
   if (!noteCache) noteCache = await (await fetch("/api/note")).json();
-  $("#noteMeta").textContent = `${noteCache.file}／確認日 ${noteCache.confirmedOn || "—"}／${noteCache.rows.length}行`;
+  $("#noteMeta").textContent = `確認日 ${noteCache.confirmedOn || "—"}／${noteCache.rows.length}項目`;
   renderNote("");
 }
 $("#noteSearch").addEventListener("input", (e) => renderNote(e.target.value));
@@ -621,7 +630,7 @@ const US_CLASS_NEEDS = {
 function pathCompare(af, others) {
   const rowId = af ? "US-X2" : "US-X1";
   const coldBasis = af ? "21 CFR 114.3(b) に、冷蔵で保管・流通・販売する物は対象外と書かれています。" : "FDAの手引き（LACF/AF – Precursor Questions and Flow、2016年）の最初の問いで、冷蔵・冷凍で保管・流通・販売する物は対象外とされています。";
-  return `<div class="paths"><b>道の選び方</b>（決まりノート ${rowId}）
+  return `<div class="paths"><b>道の選び方</b>（決まり ${rowId}）
     <div class="paths-grid">
       <div class="path"><div class="path-h">① 常温のまま出す</div>
         <p>今の商品のまま出せます。</p>
@@ -709,8 +718,8 @@ function logicMap() {
   const ar = `<div class="lg-arrow">↓</div>`;
   return `<details class="flow logic"><summary>なぜこの判定か（AIとルールの分担、根拠）</summary><div class="lg-col">
     ${box("lg-ai", "① ラベルを読む（AI）", "写真の文字をClaudeが読み取ります")}${ar}
-    ${box("lg-ai", "② 決まりノートと照合（AI）", "3つの要件と入口の条件を、1行ずつ当てはめます")}${ar}
-    ${box("lg-rule", "③ 数値と地名は固定のルール", "pH・水分活性、10都県などは、毎回同じ答えになるようプログラムで決めます")}${ar}
+    ${box("lg-ai", "② 決まりノートと照合（AI）", "3つの要件と入口の条件を、1項目ずつ当てはめます")}${ar}
+    ${box("lg-rule", "③ 数値と地名は固定のルール", "pH・水分活性、10都県などは、毎回同じ答えになるよう自動で判定します")}${ar}
     ${box("lg-rule", "④ 根拠の確認", "根拠の文が見つからない判定は「確かめること」に下げます")}${ar}
     ${box("", "⑤ 見立てと次の一歩", "4つの見立てのどれかと、だれに何を確認するかをご案内します")}
     <p class="hint"><span class="lg-key lg-ai"></span>AIが行う所　<span class="lg-key lg-rule"></span>固定のルールで決める所</p>
