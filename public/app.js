@@ -242,9 +242,13 @@ function renderCountry(c) {
 
   const qs = c.items.filter((i) => i.status === "分からない" && i.question && !i.setup).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
   if (qs.length) {
+    // 区分の中は「輸出に向けて」の確認の順（工場→仕入先→輸入者）に並べる（藤井さん 11/6）
+    if (state.qView !== "who") {
+      const wi = (i) => { const k = WHO_GROUPS.findIndex((g) => g[0] === whoGroup(i.askWho, i.todoKind)); return k < 0 ? 99 : k; };
+      qs.sort((x, y) => wi(x) - wi(y));
+    }
     const usedKeys = new Set();
     const groups = new Map();
-    const firstThree = [];
     qs.forEach((i) => {
       const fields = (QUESTION_FIELDS[i.rowId] || []).filter((f) => !usedKeys.has(f.key));
       fields.forEach((f) => usedKeys.add(f.key));
@@ -258,9 +262,8 @@ function renderCountry(c) {
         : `<input data-q="${esc(i.rowId)}の答え" list="ansChoices" placeholder="例：工場に確認中です／まだ決まっていません" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
       const why = fields.map((f) => f.why).filter(Boolean).join(" ") || i.questionWhy || i.reason;
       const who = whoGroup(i.askWho, i.todoKind);
-      if (firstThree.length < 3) { firstThree.push(qHtml(i, inputs, why, who)); return; }
-      // 分け方：聞く相手ごと（既定）か、要件の区分ごと（藤井さん 11/4）
-      const gk = state.qView === "box" ? boxLabel(i.box) : who;
+      // 分け方：要件の区分ごと（既定、藤井さん 11/6）か、聞く相手ごと。最初の3件を別にせず、全部まとめる（藤井さん 11/6）
+      const gk = state.qView !== "who" ? boxLabel(i.box) : who;
       if (!groups.has(gk)) groups.set(gk, []);
       groups.get(gk).push(`<div class="q"><div>
         <div class="q-topic">${explain(plainTitle(i.title))} <small class="rid">${esc(i.rowId)}</small></div>
@@ -268,19 +271,13 @@ function renderCountry(c) {
         ${why ? `<div class="why"><b>お聞きする理由：</b>${explain(why)}</div>` : ""}
       </div><div class="qin">${inputs}</div></div>`);
     });
-    const order = state.qView === "box" ? BOX_ORDER.map((b) => boxLabel(b[0])) : [...WHO_GROUPS.map((g) => g[0]), "そのほか"];
+    const order = state.qView !== "who" ? BOX_ORDER.map((b) => boxLabel(b[0])) : [...WHO_GROUPS.map((g) => g[0]), "そのほか"];
     const rowsHtml = order.filter((w) => groups.has(w)).map((w) =>
-      `<details class="qgroup"><summary>${esc(w)}${state.qView === "box" ? "" : "に確認"}（${groups.get(w).length}件）</summary>${w === "相手の国の輸入者" ? `<p class="hint">輸入者がまだ決まっていなければ、まず候補を探すところから始めます。</p>` : ""}${groups.get(w).join("")}</details>`).join("");
-    const firstHtml = firstThree.join("");
-    const decided = c.items.length - qs.length;
-    const rest = qs.length - firstThree.length;
+      `<details class="qgroup"><summary>${esc(w)}${state.qView !== "who" ? "" : "に確認"}（${groups.get(w).length}件）</summary>${w === "相手の国の輸入者" ? `<p class="hint">輸入者がまだ決まっていなければ、まず候補を探すところから始めます。</p>` : ""}${groups.get(w).join("")}</details>`).join("");
     html += `<section class="questions"><h3>まずは、ここから確かめましょう</h3>
-      <p class="progress">まず確認していただきたい${firstThree.length}件です。輸出の可能性を、より詳しく確認できます。${rest > 0 ? `ほかに${rest}件あります。` : ""}</p>
-      <p class="hint">分かるところからご入力ください。</p>
-      ${firstHtml}
-      ${rest > 0 ? `<details class="qrest" ${state.qRestOpen ? "open" : ""}><summary>ほかの${rest}件を見る</summary>
-        <div class="qsw"><span class="hint">見方：</span><button class="ghost ${state.qView !== "box" ? "on" : ""}" data-qv="who">聞く相手ごと</button><button class="ghost ${state.qView === "box" ? "on" : ""}" data-qv="box">要件の区分ごと</button><span class="hint">切り替えても、入力した答えは消えません。</span></div>
-        ${rowsHtml}</details>` : ""}
+      <p class="progress">「輸出に向けて」の ① 確認 にあたる ${qs.length}件です。分かるところからご入力ください。</p>
+      <div class="qsw"><span class="hint">見方：</span><button class="ghost ${state.qView !== "who" ? "on" : ""}" data-qv="box">要件の区分ごと</button><button class="ghost ${state.qView === "who" ? "on" : ""}" data-qv="who">聞く相手ごと</button><span class="hint">切り替えても、入力した答えは消えません。</span></div>
+      ${rowsHtml}
       <button class="primary" id="rerun">入力した内容で、もう一度チェックする</button></section>`;
   }
 
