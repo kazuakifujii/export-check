@@ -191,7 +191,7 @@ function renderCountry(c) {
   const upN = upItems.length;
   const upList = upItems.slice(0, 4).map((i) => `${plainTitle(i.title).slice(0, 24)}（${i.upcoming.map((d) => d.date).join("・")}）`).join("、");
   let html = outlook(c) + `<div class="coverage">
-    <p><b>${c.name}への輸出で確かめられる事項 ${c.noteRows}項目を、すべてこの商品に当てはめました（${c.checkedRows}/${c.noteRows}）。</b><br><small>公表されている法令や、当局のQ&Aなどに記載された事項です。</small>
+    <p><b>${c.name}への輸出で確かめられる事項 ${c.noteRows}項目を、すべてこの商品に当てはめました（${c.checkedRows}/${c.noteRows}）。</b><br><small>公表されている法令や当局のQ&A、公的機関の解説などに記載された事項です。</small>
     この商品に関係するのは${applied}項目です。関係しない${s["対象外"] || 0}項目も、下で開いて確かめられます。${s["確認が必要"] ? `<b>情報が足りない${s["確認が必要"]}項目は、推測で答えを出さずに「確かめること」にしています。</b>` : ""}</p>
     <p class="split"><span class="tag ai">AI</span>食品表示の文字を読み取り、各項目との対応を整理します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、毎回同じ基準で自動判定します。</p>
     ${upN ? `<p class="hint">これから変わる決まり ${upN}件：${esc(upList)}${upN > 4 ? " ほか" : ""}</p>` : ""}
