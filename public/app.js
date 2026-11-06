@@ -149,8 +149,9 @@ function renderResult() {
       const t = r.countries[c].verdict?.tier || "進められる見込み";
       const tcls = { 入口で無理: "ol-stop", 現実的に厳しい: "ol-hard", 回避策がある: "ol-way", 進められる見込み: "ol-go", 産地しだい: "ol-ask" }[t];
       const mini = (lv, ch, word) => (s[lv] ? `<span class="mini ${LEVEL_CLASS[lv]}" data-lv="${lv}" title="押すと、${word}だけを表示">${ch}${s[lv]}</span>` : "");
-      return `<button class="ctab ${c === state.country ? "active" : ""}" data-c="${c}"><b>${esc(r.countries[c].name)}</b>
-        <span class="ttier ${tcls}">${esc(tierWord(t))}</span>${mini("出せない", "止", "出荷できない条件")}${mini("直せば出せる", "直", "直す所")}${mini("確認が必要", "確", "確かめること")}</button>`;
+      const TAB_WORD = { 入口で無理: "今は輸出不可", 現実的に厳しい: "大きな課題", 回避策がある: "回避策あり", 進められる見込み: "見込みあり", 産地しだい: "産地待ち" };
+      return `<button class="ctab ${c === state.country ? "active" : ""}" data-c="${c}" title="${esc(tierWord(t))}"><b>${esc(r.countries[c].name)}</b>
+        <span class="ttier ${tcls}">${esc(TAB_WORD[t] || tierWord(t))}</span>${mini("出せない", "止", "出荷できない条件")}${mini("直せば出せる", "直", "直す所")}${mini("確認が必要", "確", "確かめること")}</button>`;
     })
     .join("");
   const rest = Object.keys(COUNTRY_NAMES).filter((c) => !cs.includes(c));
@@ -186,15 +187,19 @@ function renderCountry(c) {
   const chip = (lv, word) =>
     `<button class="chip ${LEVEL_CLASS[lv]} ${f === lv ? "on" : ""} ${f && f !== lv ? "dim" : ""}" data-lv="${lv}" title="押すと、これだけを表示します" ${s[lv] ? "" : "disabled"}>${word} ${s[lv]}</button>`;
   const applied = c.checkedRows - (s["対象外"] || 0);
-  const upN = new Set(c.items.filter((i) => i.upcoming?.length && i.level !== "対象外").map((i) => i.rowId)).size;
+  const upItems = c.items.filter((i) => i.upcoming?.length && i.level !== "対象外");
+  const upN = upItems.length;
+  const upList = upItems.slice(0, 4).map((i) => `${plainTitle(i.title).slice(0, 24)}（${i.upcoming.map((d) => d.date).join("・")}）`).join("、");
   let html = outlook(c) + `<div class="coverage">
-    <p><b>決まりノートの${c.checkedRows}行を、1行ずつ当てはめました${c.checkedRows === c.noteRows ? "（抜けはありません）" : `（${c.noteRows}行のうち）`}。</b>
+    <p><b>登録した決まり ${c.noteRows}行を、すべて照合しました（${c.checkedRows}/${c.noteRows}）。</b>
     この商品に当てはまったのは${applied}行です。当てはまらなかった${s["対象外"] || 0}行も、下で開いて確かめられます。${s["確認が必要"] ? `情報が足りない${s["確認が必要"]}行は、答えを作らずに「確かめること」にしています。` : ""}</p>
-    <p class="hint">決まりの確認日 ${esc(state.result.asOf)}${upN ? `／これから変わる決まりが${upN}件あります（カードの日付の印）` : ""}。輸出相談の準備用です。出荷の前に、輸入者とご確認ください。</p>
+    <p class="split"><span class="tag ai">AI</span>ラベルの文字を読み取り、各行に照合します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、プログラムの決まったルールで判定します。</p>
+    ${upN ? `<p class="hint">これから変わる決まり ${upN}件：${esc(upList)}${upN > 4 ? " ほか" : ""}</p>` : ""}
+    <p class="hint">決まりの確認日 ${esc(state.result.asOf)}。輸出相談の準備用です。出荷の前に、輸入者とご確認ください。</p>
   </div>${flowMap(c)}
   <div class="summary">
     ${chip("出せない", "出荷できない条件")}${chip("直せば出せる", "直す所")}${chip("確認が必要", "確かめること")}
-    <span class="sep"></span><span class="minor">${chip("輸出用に足す", "輸出用ラベルで足す所")}${chip("問題なし", "問題なし")}${chip("対象外", "当てはまらない")}</span>
+    <span class="sep"></span><span class="minor">${chip("輸出用に足す", "輸出用ラベルで足す所")}</span>
   </div>
   <div class="guide">
     <p class="hint">日本語の表示は、輸出先の言葉に翻訳するものとして判定しています。</p>
@@ -330,6 +335,10 @@ function renderCountry(c) {
   document.querySelectorAll(".qsw button").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll("[data-q]").forEach((el) => { if (el.value.trim()) state.extraAnswers[el.dataset.q] = el.value.trim(); });
     state.qView = b.dataset.qv; state.qRestOpen = true; renderResult();
+  }));
+  document.querySelectorAll(".go-q").forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    document.querySelector("section.questions")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }));
   document.querySelectorAll(".open-logic").forEach((a) => a.addEventListener("click", (e) => {
     e.preventDefault();
@@ -575,9 +584,9 @@ function renderAnnotated() {
       .filter(([lv]) => cnt(lv)).map(([lv, w]) => `${w}${cnt(lv)}件`).join("・");
     return `<div class="a3-cell" data-c="${code}"><span class="a3-cn">${esc(r.countries[code].name)}</span>${top.map(call).join("")}${rest.length ? `<details class="a3-more"><summary>ほかにも ${restWord}</summary>${rest.map(call).join("")}</details>` : ""}</div>`;
   };
-  const row = (text, k, extra = "") => {
+  const row = (text, k, extra = "", sub = "") => {
     const has = cs.some((c) => place[c][k].length);
-    return `<div class="a3-row ${has ? "has" : ""} ${extra}"><div class="al-line">${esc(text)}</div>
+    return `<div class="a3-row ${has ? "has" : ""} ${extra}"><div class="al-line">${esc(text)}${sub ? `<br><small>${esc(sub)}</small>` : ""}</div>
       ${has ? cs.map((c) => cell(c, k)).join("") : `<div class="al-none" style="grid-column: span ${cs.length}">今回の確認では、追加の指摘はありません</div>`}</div>`;
   };
   const head = cs.map((code) => {
@@ -592,7 +601,7 @@ function renderAnnotated() {
   $("#countryBody").innerHTML = `<p class="hint">同じラベルの行の横に、国ごとの指摘を並べました。押すと中身が開きます。見立てだけで輸出先を決めず、売り先や費用とあわせて輸入者と相談してください。</p>${more}${photo}
     <div class="annot3" style="--n:${cs.length}">
       <div class="a3-row a3-top"><div></div>${head}</div>
-      ${row("輸出前に確かめること（ラベルだけでは済まない：工場・原料・手続き）", lines.length, "al-missing al-band")}
+      ${row("輸出前に確かめること（ラベルだけでは済まない：工場・原料・手続き）", lines.length, "al-missing al-band", "ラベルのどの行にも対応しない項目です。写真を読むだけでは出てこない条件を、決まりの側から確かめています。")}
       ${lines.map((l, k) => row(l, k)).join("")}
     </div>
     <p class="legend"><span class="dot lv-stop"></span>出荷できない条件 <span class="dot lv-fix"></span>直す所 <span class="dot lv-ask"></span>確かめること <span class="dot lv-add"></span>輸出用ラベルで足す所</p>`;
@@ -721,7 +730,7 @@ function flowMap(c) {
       ${step(1, "確認", `<ul>${people.map((p) => `<li>${p}に確認</li>`).join("")}</ul><p class="hint">登録が要るか、どのくらい時間がかかるかも、ここで確かめます。商社にまとめて相談することもできます。</p>`, true)}${ar}
       ${step(2, "判断", `<p>輸入者の受け入れ見込みと費用を確かめて、輸出するかを決めます。</p><p class="hint">この道具では費用は出ません。</p>`)}${ar}
       ${step(3, "準備", `<ul>${hasReg ? "<li>登録・届け出</li>" : ""}<li>輸出用のラベル</li></ul><p class="hint">ラベルの案は早めに作れます。表示の確定は最後です。</p>`, true)}${ar}
-      ${step(4, "出荷", `<p>出荷の段取り</p><p class="hint">Claudeに順番表を作ってもらえます。</p>`)}
+      ${step(4, "出荷", `<p>出荷の段取り</p><p class="hint">段取り表を作ります。Claudeへの相談文も用意しています。</p>`)}
     </div></details>`;
 }
 
@@ -741,12 +750,16 @@ function shortWays(w) {
 }
 // 「ラベルを直せば出せる」の思い込みをほどく一行（議論 11/6）：ラベルの直しと、ラベル以外の確認・準備を並べる
 function ratioLine(c) {
-  const live = c.items.filter((i) => !i.setup);
-  const lab = live.filter((i) => i.box === "製品" && ["直せば出せる", "輸出用に足す"].includes(i.level)).length;
-  const beyond = live.filter((i) => ["施設", "交差", "入口"].includes(i.box) && ["出せない", "直せば出せる", "確認が必要"].includes(i.level)).length;
-  const link = `<p class="why-link"><a href="#" class="open-logic">なぜこの判定か（AIとルールの分担、根拠）を見る</a></p>`;
+  const sm = c.summary || {};
+  const live = c.items.filter((i) => !i.setup && ["出せない", "直せば出せる", "確認が必要"].includes(i.level));
+  const lab = live.filter((i) => i.box === "製品").length;
+  const beyond = live.length - lab;
+  const add = sm["輸出用に足す"] || 0;
+  const link = `<p class="why-link"><a href="#" class="open-logic">なぜこの判定か（AIとルールの分担、根拠）を見る</a>　<a href="#" class="go-q">確かめることの一覧へ</a></p>`;
   if (!beyond) return link;
-  return `<p class="ratio">この商品では、ラベルで直す・足す所が<b>${lab}件</b>、工場・原料・手続きで確かめることや準備が<b>${beyond}件</b>あります。ラベルを直すだけでは、${beyond}件は残ります。</p>${link}`;
+  // 数は下の「出荷できない条件・直す所・確かめること」の合計を、ラベルの中か外かで分けたもの（議論 11/6：数をそろえる）
+  return `<p class="ratio">ラベル以外にも、工場・原料・手続きで確かめることや準備が <b>${beyond}件</b> あります。</p>
+    <p class="ratio-sub">出荷できない条件・直す所・確かめること 計${live.length}件のうち、ラベルの中で直せるのは${lab}件です${add ? `（ほかに、輸出用ラベルで足す所が${add}件）` : ""}。ラベルを直すだけでは、${beyond}件は残ります。</p>${link}`;
 }
 function outlook(c) {
   const name = esc(c.name);
