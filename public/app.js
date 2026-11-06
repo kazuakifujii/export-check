@@ -481,7 +481,7 @@ function whoGroup(askWho, todoKind) {
 
 function conceptMap() {
   return `<figure class="concept">
-    <p class="concept-lead">ラベルを直せば出せる、とは限りません。この3つをセットで見ると、見落としを防げます。</p>
+    <p class="concept-lead">ラベルだけでなく、この3つをセットで準備すると、見落としなく輸出を進められます。</p>
     <div class="cbox c-製品"><b>製品の要件</b><small>国によって決まりが違う。ラベルと原料を合わせる</small>
       <span class="ex">例</span><ul class="exl"><li>アレルゲンの対象が国ごとに違う（米国はごま、EUはセロリ・からしも）</li><li>日本で使える添加物・着色料が、使えない国がある</li><li>栄養成分の表示の様式が国ごとに違う</li></ul></div>
     <div class="carrow">→</div>
@@ -594,7 +594,7 @@ function renderAnnotated() {
     const v = c.verdict || { tier: "進められる見込み" };
     const cls = { 入口で無理: "ol-stop", 現実的に厳しい: "ol-hard", 回避策がある: "ol-way", 進められる見込み: "ol-go", 産地しだい: "ol-ask" }[v.tier];
     const wall = (v.items || [])[0];
-    return `<div class="a3-head outlook ${cls}"><div><b>${esc(c.name)}</b> <span class="tier">${esc(tierWord(v.tier))}</span></div>${wall ? `<div class="a3-wall">いちばんの壁：${explain(plainTitle(wall.title))}</div>` : ""}</div>`;
+    return `<div class="a3-head outlook ${cls}"><div><b>${esc(c.name)}</b> <span class="tier">${esc(tierWord(v.tier))}</span></div>${wall ? `<div class="a3-wall">まず越えたい所：${explain(plainTitle(wall.title))}</div>` : ""}</div>`;
   }).join("");
   const more = rest.length ? `<p class="a3-rest">ほかの国も並べる：${rest.map((c) => `<button class="ghost nextc2" data-c="${c}">${COUNTRY_NAMES[c]}でチェックする</button>`).join("")}</p>` : "";
   const photo = state.image ? `<details class="al-photo"><summary>元の写真と見比べる</summary><img src="data:${esc(state.mediaType)};base64,${state.image}" alt="ラベルの写真"></details>` : "";
@@ -758,7 +758,7 @@ function ratioLine(c) {
   const link = `<p class="why-link"><a href="#" class="open-logic">なぜこの判定か（AIとルールの分担、根拠）を見る</a>　<a href="#" class="go-q">確かめることの一覧へ</a></p>`;
   if (!beyond) return link;
   // 数は下の「出荷できない条件・直す所・確かめること」の合計を、ラベルの中か外かで分けたもの（議論 11/6：数をそろえる）
-  return `<p class="ratio">ラベル以外にも、工場・原料・手続きで確かめることや準備が <b>${beyond}件</b> あります。</p>
+  return `<p class="ratio">ラベルとあわせて、工場・原料・手続きで <b>${beyond}件</b> を準備すると、輸出に近づきます。</p>
     <p class="ratio-sub">出荷できない条件・直す所・確かめること 計${live.length}件のうち、ラベルの中で直せるのは${lab}件です${add ? `（ほかに、輸出用ラベルで足す所が${add}件）` : ""}。ラベルを直すだけでは、${beyond}件は残ります。</p>${link}`;
 }
 function outlook(c) {
@@ -771,11 +771,11 @@ function outlook(c) {
   const beyond = beyondAll.slice(0, 3);
   const beyondMore = beyondAll.length > 3 ? ` ほか${beyondAll.length - 3}件` : "";
   const MSG = {
-    入口で無理: ["ol-stop", `${name}へは、今の仕様のままでは輸出できません。`, "国として受け入れを止めている条件に該当します。別の方法がないか、輸入者や窓口にご相談ください。"],
-    現実的に厳しい: ["ol-hard", `${name}へは、大きな課題があります。`, "制度上の道はありますが、現実的な方法は見つかっていません。別の方法がないか、輸入者や窓口にご相談ください。"],
-    回避策がある: ["ol-way", `${name}へは、今の原料や作り方のままでは課題がありますが、回避策を検討できます。`, ""],
-    進められる見込み: ["ol-go", `${name}へは、進められる見込みです。`, "確認した範囲では、大きな壁は見つかっていません。残る条件をご確認ください。"],
-    産地しだい: ["ol-ask", `${name}へは、工場と主な原料の産地しだいです。`, "産地が10都県の外と分かれば、ほかに大きな壁は見つかっていません。"],
+    入口で無理: ["ol-stop", `${name}へは、今の仕様のままでは輸出できません。`, "国として受け入れを止めている条件に該当します。ほかの輸出先や別の進め方も含めて、輸入者や窓口と一緒に探しましょう。"],
+    現実的に厳しい: ["ol-hard", `${name}へは、大きな課題があります。`, "制度上の道はありますが、現実的な方法は見つかっていません。ほかの輸出先や別の進め方も含めて、輸入者や窓口と一緒に探しましょう。"],
+    回避策がある: ["ol-way", `${name}へは、回避策を取れば輸出を目指せます。`, "先に解決したい課題と、その進め方は次のとおりです。"],
+    進められる見込み: ["ol-go", `${name}へは、輸出を進められる見込みです。`, "確認した範囲では、大きな壁は見つかっていません。残る条件を確かめながら進めましょう。"],
+    産地しだい: ["ol-ask", `${name}へは、工場と主な原料の産地が分かれば、輸出の道が見えてきます。`, "産地が10都県の外なら、ほかに大きな壁は見つかっていません。"],
   }[v.tier];
   const li = (x) => {
     // 上の帯に回避策が出ている行（EUの動物由来の原料）は、同じ回避策を繰り返さない
