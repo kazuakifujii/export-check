@@ -205,7 +205,7 @@ export function usSpecialRules(label) {
   if (isJuiceDrink(name, ing)) out.push({ key: "ジュース", text: /粉末/.test(name) ? "果汁の飲み物の素です。ジュースのHACCP（US-X13）に当たるかを確かめてください。" : "果汁の飲み物には、ジュースのHACCP（US-X13）が当たります。野菜ジュースなどpHが4.6を超える物は、低酸性食品の決まりも重なります。" });
   const fish = fishKind(name, ing);
   if (fish === "中心") out.push({ key: "水産", text: "魚介が中心の食品は、作る工場に水産物のHACCP（US-F8）が当たる見込みです。缶詰の区分とは別にかかります。" });
-  else if (fish === "原料") out.push({ key: "水産原料", text: "かつお節などの魚介の原料を使っています。その原料を作る工場に水産物のHACCP（US-F8）が当たり、輸入者が確かめます。" });
+  else if (fish === "原料") out.push({ key: "水産原料", text: "かつお節などの魚介を使っています。水産物のHACCP（US-F8）は、魚が商品を特徴づける原料の時に当たります（かつおだし・つゆなど）。風味づけに少し使うだけなら、当たらない見込みです（21 CFR 123.3）。" });
   if (/清酒|日本酒|焼酎|ビール|ワイン|リキュール|梅酒/.test(name)) out.push({ key: "酒", text: "お酒は、輸入者の輸入許可とラベルの承認（US-X14）が要ります。" });
   return out;
 }
