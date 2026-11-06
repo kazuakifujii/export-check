@@ -217,7 +217,7 @@ function renderCountry(c) {
   if (f) {
     html += `<div class="filterbar">「${esc(levelWord(f))}」だけを表示しています（${s[f]}件） <button class="ghost" id="showAll">すべて表示に戻す</button></div>`;
   }
-  html += `<div class="boxes">`;
+  html += `<p class="cards-tools"><span class="hint">各項目は見出しを押すと開きます。</span><button class="ghost" id="openAll">すべて開く</button><button class="ghost" id="closeAll">すべて閉じる</button></p><div class="boxes">`;
   for (const [key, name, sub] of BOX_ORDER) {
     const items = c.items.filter((i) => i.box === key && !i.setup);
     // 製品・交差・施設の枠は、当てはまる物が無くても残す（「懸念が見つかっていない」と伝わるように。藤井さん 11/4）
@@ -320,6 +320,8 @@ function renderCountry(c) {
   html += logicMap();
   html += `<datalist id="ansChoices"><option value="社内に聞きます"><option value="仕入先に聞きます"><option value="測っていません"><option value="まだ決まっていません"></datalist>`;
   $("#countryBody").innerHTML = html;
+  $("#openAll")?.addEventListener("click", () => document.querySelectorAll(".boxes details.card").forEach((d) => (d.open = true)));
+  $("#closeAll")?.addEventListener("click", () => document.querySelectorAll(".boxes details.card").forEach((d) => (d.open = false)));
   document.querySelectorAll(".card").forEach((el) => {
     el.addEventListener("mouseenter", () => highlight(el.dataset.quote));
     el.addEventListener("mouseleave", () => highlight(""));
@@ -507,14 +509,15 @@ function card(i) {
   const link = i.urls[0] ? `<a href="${esc(i.urls[0])}" target="_blank" rel="noopener">根拠を見る</a>` : "";
   const way = i.workaround && ["出せない", "直せば出せる"].includes(i.level) ? `<div class="way"><b>回避策：</b>${explain(i.workaround)}</div>` : "";
   const hard = i.hard && ["出せない", "直せば出せる"].includes(i.level) ? `<span class="tag weak">現実的に厳しい</span>` : "";
-  return `<article class="card ${LEVEL_CLASS[i.level]}" data-quote="${esc(i.labelQuote)}">
-    <header><span class="badge ${LEVEL_CLASS[i.level]}">${esc(levelWord(i.level))}</span>${explain(plainTitle(i.title))}</header>
+  // 最初は見出しだけを並べ、押すと中身が開く（藤井さん 11/6）
+  return `<details class="card ${LEVEL_CLASS[i.level]}" data-quote="${esc(i.labelQuote)}">
+    <summary><span class="badge ${LEVEL_CLASS[i.level]}">${esc(levelWord(i.level))}</span>${explain(plainTitle(i.title))}</summary>
     ${i.todo && i.level !== "問題なし" ? `<div class="todo">次に：${esc(i.todo)}</div>` : ""}
     <p>${esc(i.reason)}</p>
     ${quote}${answer}${nq}${flags}
     ${i.todo && i.level === "問題なし" ? `<div class="todo">次に：${esc(i.todo)}</div>` : ""}${way}
     <footer>${hard}${prog}${weak}${up} ${link}<span class="rid">${esc(i.rowId)}</span></footer>
-  </article>`;
+  </details>`;
 }
 
 // ---------- 決まりノート ----------

@@ -265,3 +265,11 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .coverage .split { font-size: 14px; }
 .ratio-sub { font-size: 14px; color: var(--ink, #222); }
 .outlook.ol-neutral { border-color: var(--line); background: #fff; } .outlook.ol-neutral .tier { background: #5b6470; } .outlook.ol-neutral .ol-main { color: var(--ink, #222); }
+
+/* カードは見出しだけで畳む（11/6） */
+details.card > summary { cursor: pointer; font-size: 15px; font-weight: 600; list-style: none; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::after { content: " ▸"; color: var(--muted); font-weight: 400; }
+details.card[open] > summary::after { content: " ▾"; }
+details.card[open] > summary { margin-bottom: 4px; }
+.cards-tools { display: flex; gap: 8px; align-items: center; margin: 8px 0; } .cards-tools .hint { margin-right: auto; }
