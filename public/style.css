@@ -227,3 +227,30 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .path-h { font-weight: 700; margin-bottom: 2px; }
 .path p { margin: 2px 0; font-size: 13px; } .path-need { color: #555; }
 .path-note { font-size: 12px; color: #555; margin: 4px 0 0; }
+
+/* 画面の議論 11/6 */
+.boxes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.a3-row { grid-template-columns: minmax(180px, 30%) repeat(var(--n), minmax(0, 1fr)); }
+.tgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.card, .box, .a3-row > * { overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 900px) { .boxes, .tgrid, .a3-row { grid-template-columns: 1fr; } }
+.card { font-size: 14px; line-height: 1.65; }
+.card header { font-size: 15px; font-weight: 600; }
+.card .rid { margin-left: auto; color: var(--muted); font-size: 11px; }
+.q-note { color: var(--ink, #222); border-left: 3px solid #b9b2a6; padding-left: 6px; margin-top: 3px; }
+.tag.ai { color: #4b3fa0; border-color: #a9a3dc; }
+.ctab { display: inline-flex; align-items: center; gap: 6px; }
+.ttier { font-size: 12px; padding: 1px 8px; border-radius: 10px; color: #fff; }
+.ttier.ol-stop { background: var(--stop); } .ttier.ol-hard { background: var(--fix); } .ttier.ol-way { background: #b06a00; } .ttier.ol-ask, .ttier.ol-go { background: var(--ask); } .ttier.ol-go { background: var(--ok); }
+.coverage { border: 1px solid var(--line); border-left: 4px solid var(--ok); background: #fff; border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 14px; }
+.coverage p { margin: 2px 0; }
+.summary .minor .chip { font-size: 12px; opacity: .8; }
+.ratio { background: #fff; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+.why-link { font-size: 13px; margin: 4px 0; }
+.outlook.ol-ask { border-color: var(--ask); background: var(--ask-bg); } .outlook.ol-ask .tier { background: var(--ask); } .outlook.ol-ask .ol-main { color: var(--ask); }
+.cbox .ex { display: inline-block; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 0 6px; margin-top: 4px; background: #fff; }
+.cbox ul.exl { color: #555; font-size: 12px; }
+
+/* 色の意味を固定（議論 11/6）：止＝赤／課題・条件つき＝橙・こはく／情報待ち＝青／問題なし＝緑 */
+.outlook.ol-way { border-color: #b06a00; background: #fff6e5; } .outlook.ol-way .tier { background: #b06a00; } .outlook.ol-way .ol-main { color: #8a5300; }
+.legend-colors { font-size: 12px; color: var(--muted); }
