@@ -220,7 +220,7 @@ function renderCountry(c) {
     if (!items.length && key === "入口") continue;
     if (f) {
       const only = items.filter((i) => i.level === f);
-      if (only.length) html += `<section class="box box-${key}"><h3>${name}<small>${sub}</small></h3>${only.map(card).join("")}</section>`;
+      if (only.length) html += `<section class="box box-${key}"><h3>${name}<small>${sub}</small></h3>${cardsWithBundles(only, c.items)}</section>`;
       continue;
     }
     const order = ["出せない", "直せば出せる", "確認が必要", "問題なし"];
@@ -229,7 +229,7 @@ function renderCountry(c) {
     const na = items.filter((i) => i.level === "対象外");
     html += `<section class="box box-${key}">
       <h3>${name}<small>${sub}</small></h3>
-      ${shown.map(card).join("") || emptyBox(c, key, na.length)}
+      ${cardsWithBundles(shown, c.items) || emptyBox(c, key, na.length)}
       ${add.length ? `<details class="addon"><summary>＋α 輸出用ラベルで足す所（${add.length}）</summary>
         <p class="hint">日本のラベルには通常書かれていない、輸出先で必要な表示です。輸出用のラベルを作る際に加えてください。</p>${add.map(card).join("")}</details>` : ""}
     </section>`;
@@ -499,6 +499,37 @@ function flagWord(f) {
   if (f.startsWith("ラベルに無い言葉")) return "食品表示に無い言葉を根拠にしていました";
   if (f.startsWith("ラベルにも答えにも")) return "食品表示にもご回答にも根拠が見つかりませんでした";
   return f;
+}
+// 1つ済ませると芋づる式に片づく項目は、1枚にまとめて畳む（藤井さん 11/6「施設登録をしたら解決する施設要件は畳めないか」）
+const BUNDLES = [
+  { id: "US-REG", lead: "US-F1", members: ["US-F1", "US-F4", "US-F2", "US-F3", "US-F14", "US-X5"],
+    title: "米国FDAへの食品施設の登録",
+    note: "1つの手続きで、まとめて進められます。",
+    aside: "食品安全計画（予防管理）と、輸入者による工場の確認（FSVP）は、登録とは別の準備です。" },
+];
+const bundleOf = (id) => BUNDLES.find((b) => b.members.includes(id));
+const LV_RANK = ["出せない", "直せば出せる", "確認が必要", "問題なし"];
+// 枠の中の項目を、まとめ（bundle）と単独の項目に分けて描く
+function cardsWithBundles(list, all) {
+  const done = new Set();
+  return list.map((i) => {
+    const b = bundleOf(i.rowId);
+    if (!b) return card(i);
+    if (done.has(b.id)) return "";
+    done.add(b.id);
+    const inBox = list.filter((x) => b.members.includes(x.rowId));
+    if (inBox.length < 2) return card(i);
+    const extra = all.filter((x) => b.members.includes(x.rowId) && !inBox.includes(x) && !["対象外", "問題なし"].includes(x.level));
+    const where = (x) => (x.setup ? "「輸出を決めたあとの段取り」" : `「${boxLabel(x.box)}」`);
+    const worst = inBox.map((x) => x.level).sort((a, c) => LV_RANK.indexOf(a) - LV_RANK.indexOf(c))[0];
+    return `<details class="card bundle ${LEVEL_CLASS[worst]}">
+    <summary><span class="badge ${LEVEL_CLASS[worst]}">${esc(levelWord(worst))}</span>${esc(b.title)}<small class="bcount">まとめて片づく ${inBox.length + extra.length}項目</small></summary>
+    <p class="bnote">${esc(b.note)}</p>
+    ${inBox.map(card).join("")}
+    ${extra.length ? `<p class="bmore">同じ手続きで、あわせて進むこと</p><ul class="bmore">${extra.map((x) => `<li>${esc(plainTitle(x.title))} <small class="hint">${where(x)}にも掲載</small></li>`).join("")}</ul>` : ""}
+    ${b.aside ? `<p class="hint">${esc(b.aside)}</p>` : ""}
+  </details>`;
+  }).join("");
 }
 function card(i) {
   const up = i.upcoming.map((d) => `<span class="tag up">${esc(d.label)} ${esc(d.date)}</span>`).join("");

@@ -280,3 +280,10 @@ details.card[open] > summary { margin-bottom: 4px; }
 .band-more[open] > summary { margin-bottom: 6px; }
 .coverage-line { font-size: 15px; margin: 6px 0 10px; }
 .premise h3 { margin: 0 0 6px; font-size: 15px; }
+/* 芋づる式に片づく項目のまとめ（藤井さん 11/6） */
+details.card.bundle { border-width: 2px; }
+details.card.bundle > summary .bcount { margin-left: .6em; font-size: .8em; color: #555; font-weight: normal; }
+details.card.bundle .bnote { background: #f4f7fb; border-radius: 6px; padding: .5em .7em; }
+details.card.bundle > details.card { margin: .4em 0 .4em .6em; }
+details.card.bundle p.bmore { margin: .6em 0 .2em; font-weight: bold; font-size: .92em; }
+details.card.bundle ul.bmore { margin: 0 0 .5em; padding-left: 1.4em; }
