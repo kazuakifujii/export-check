@@ -273,3 +273,10 @@ details.card > summary::after { content: " ▸"; color: var(--muted); font-weigh
 details.card[open] > summary::after { content: " ▾"; }
 details.card[open] > summary { margin-bottom: 4px; }
 .cards-tools { display: flex; gap: 8px; align-items: center; margin: 8px 0; } .cards-tools .hint { margin-right: auto; }
+
+/* 帯は要点だけ、細部は畳む（11/6） */
+.band .band-ask { background: #fff; border-left: 4px solid currentColor; padding: 6px 10px; border-radius: 4px; font-size: 15px; }
+.band-more > summary { cursor: pointer; font-weight: 700; margin-top: 6px; padding: 6px 10px; background: #fff; border: 1px solid var(--line); border-radius: 6px; display: inline-block; }
+.band-more[open] > summary { margin-bottom: 6px; }
+.coverage-line { font-size: 15px; margin: 6px 0 10px; }
+.premise h3 { margin: 0 0 6px; font-size: 15px; }

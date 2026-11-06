@@ -190,24 +190,20 @@ function renderCountry(c) {
   const upItems = c.items.filter((i) => i.upcoming?.length && i.level !== "対象外");
   const upN = upItems.length;
   const upList = upItems.slice(0, 4).map((i) => `${plainTitle(i.title).slice(0, 24)}（${i.upcoming.map((d) => d.date).join("・")}）`).join("、");
-  let html = outlook(c) + `<div class="coverage">
-    <p><b>${c.name}への輸出で確かめられる事項 ${c.noteRows}項目を、すべてこの商品に当てはめました（${c.checkedRows}/${c.noteRows}）。</b><br><small>公表されている法令や当局のQ&A、公的機関の解説などに記載された事項です。</small>
-    この商品に関係するのは${applied}項目です。関係しない${s["対象外"] || 0}項目も、下で開いて確かめられます。${s["確認が必要"] ? `<b>情報が足りない${s["確認が必要"]}項目は、推測で答えを出さずに「確かめること」にしています。</b>` : ""}</p>
-    <p class="split"><span class="tag ai">AI</span>食品表示の文字を読み取り、各項目との対応を整理します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、毎回同じ基準で自動判定します。</p>
-    ${upN ? `<p class="hint">これから変わる決まり ${upN}件：${esc(upList)}${upN > 4 ? " ほか" : ""}</p>` : ""}
-    <p class="hint">決まりの確認日 ${esc(state.result.asOf)}。輸出相談の準備用です。出荷の前に、輸入者とご確認ください。</p>
-  </div>${flowMap(c)}
+  // 並び：見立て → 件数 → 3つの要件 → 輸出に向けて → 確かめること → 前提と補足（細かい前提は後ろへ。藤井さん 11/6）
+  let html = outlook(c) + `
   <div class="summary">
     ${chip("出せない", "出荷できない条件")}${chip("直せば出せる", "直す所")}${chip("確認が必要", "確かめること")}
     <span class="sep"></span><span class="minor">${chip("輸出用に足す", "輸出用ラベルで足す所")}</span>
   </div>
-  <div class="guide">
+  <p class="coverage-line"><b>${c.name}への輸出で確かめられる事項 ${c.noteRows}項目を、すべてこの商品に当てはめました（${c.checkedRows}/${c.noteRows}）。</b>${s["確認が必要"] ? ` 情報が足りない${s["確認が必要"]}項目は、推測で答えを出さずに「確かめること」にしています。` : ""}</p>`;
+  const premise = `<section class="coverage premise"><h3>前提と補足</h3>
+    <p>${c.name}への輸出で確かめられる事項は、公表されている法令や当局のQ&A、公的機関の解説などに記載された事項です。この商品に関係するのは${applied}項目、関係しないのは${s["対象外"] || 0}項目です。</p>
+    <p class="split"><span class="tag ai">AI</span>食品表示の文字を読み取り、各項目との対応を整理します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、毎回同じ基準で自動判定します。</p>
     <p class="hint">日本語の表示は、輸出先の言葉に翻訳するものとして判定しています。</p>
-    ${s["出せない"] ? `<p><b class="g-stop">出荷できない条件があります（${s["出せない"]}）</b>　理由と、進むための条件をご確認ください。</p>` : ""}
-    ${s["直せば出せる"] ? `<p><b class="g-fix">直す所があります（${s["直せば出せる"]}）</b>　表示の修正や、登録・証明書の準備です。直したあとで、もう一度確かめられます。</p>` : ""}
-    ${s["確認が必要"] ? `<p><b class="g-ask">確かめること（${s["確認が必要"]}）</b>　どなたに聞けばよいかも、あわせてご案内します。</p>` : ""}
-    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが解決するまでは出荷を控え、輸入者への確認が必要です。</p>` : `<p class="hint">確認した範囲では、問題になる条件は見つかっていません。出荷の前に、輸入者や窓口とご確認ください。</p>`}
-  </div>`;
+    ${upN ? `<p class="hint">これから変わる決まり ${upN}件：${esc(upList)}${upN > 4 ? " ほか" : ""}</p>` : ""}
+    <p class="hint">決まりの確認日 ${esc(state.result.asOf)}。輸出相談の準備用です。出荷の前に、輸入者への確認が必要です。</p>
+  </section>`;
 
   if (c.stoppedAtEntry) {
     html += `<div class="banner stop"><strong>この国に輸出できるか判断するために、確認が必要な条件があります。</strong>${esc(c.stoppedAtEntry.reason)}
@@ -239,6 +235,7 @@ function renderCountry(c) {
     </section>`;
   }
   html += `</div>`;
+  html += flowMap(c);
 
   const qs = c.items.filter((i) => i.status === "分からない" && i.question && !i.setup).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
   if (qs.length) {
@@ -314,7 +311,7 @@ function renderCountry(c) {
     html += `<details class="na naall"><summary>この商品には当てはまらない項目 ${naAll.length}件（開く）</summary>
       <p class="hint">すべての項目を当てはめたうえで、この商品には関係しないと判定した項目です。</p>${naAll.map(card).join("")}</details>`;
   }
-  html += logicMap();
+  html += premise + logicMap();
   html += `<datalist id="ansChoices"><option value="社内に聞きます"><option value="仕入先に聞きます"><option value="測っていません"><option value="まだ決まっていません"></datalist>`;
   $("#countryBody").innerHTML = html;
   $("#openAll")?.addEventListener("click", () => document.querySelectorAll(".boxes details.card").forEach((d) => (d.open = true)));
@@ -663,14 +660,17 @@ function usClassBand(c) {
   const ways = lacf || af ? shortWays(row?.workaround).map((w) => (/冷蔵/.test(w.head) ? { ...w, remain: [w.remain, "米国内の輸送・保管・店頭まで冷蔵を守れるか、輸入者に確かめるのが前提"].filter(Boolean).join("、") } : w)) : [];
   const ask = !u.sure && !["冷蔵・冷凍", "肉の量が先"].includes(u.cls);
   const inp = (key, label, ph) => `<label class="qf"><span>${label}</span><input data-q="${key}" placeholder="${ph}" value="${esc(state.extraAnswers[key] || "")}"></label>`;
-  return `<div class="outlook usclass ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p>${burden}${u.cls === "肉の量が先" ? `<p>${explain(u.why)}</p>` : ""}
-    ${ask ? `<p><b>工場に確かめたいこと：</b>${u.needSealedQuestion ? "密封して加熱殺菌しているか、" : ""}完成品の pH と水分活性。ご入力いただくと、当たるかどうかが分かります。</p>` : ""}
+  // 帯は要点だけを見せ、細かい前提は「次の内容をご確認ください」に畳む（藤井さん 11/6）
+  const moreBody = `
     ${(u.also || []).length ? `<div class="way"><b>商品の種類で、ほかにも当たる決まり</b><ul>${u.also.map((a) => `<li>${explain(a)}</li>`).join("")}</ul></div>` : ""}
     ${lacf || af ? pathCompare(af, ways.filter((w) => !/冷蔵/.test(w.head))) : ""}
     <details class="more"><summary>くわしく</summary><p>${explain(u.why)}</p>${needs.length ? `<p><b>当たる場合に必要なもの</b></p><ul>${needs.map((n) => `<li>${explain(n)}</li>`).join("")}</ul>` : ""}</details>
     ${ask ? `<div class="usask"><b>品質管理のご担当に確認のうえ、ご入力ください</b>（「この商品の完成品の pH と水分活性を教えてください」）
       <div class="qin">${u.needSealedQuestion ? `<label class="qf"><span>密封して加熱殺菌していますか</span><select data-q="密封・加熱殺菌"><option value=""></option>${["はい", "いいえ"].map((o) => `<option ${state.extraAnswers["密封・加熱殺菌"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label>` : ""}${inp("pH", "pH", "例：5.8")}${inp("Aw", "水分活性", "例：0.97")}<label class="qf"><span>工場から店までの温度</span><select data-q="保存"><option value=""></option>${["ずっと冷蔵", "途中で常温に置く時間がある", "常温"].map((o) => `<option ${state.extraAnswers["保存"] === o ? "selected" : ""}>${o}</option>`).join("")}</select></label></div>
-      <button class="primary rerun2">入力した内容で、もう一度チェックする</button></div>` : ""}
+      <button class="primary rerun2">入力した内容で、もう一度チェックする</button></div>` : ""}`;
+  return `<div class="outlook usclass band ${tone}"><span class="tier">米国：缶詰・瓶詰・レトルトの区分</span><p class="ol-main">${esc(head)}</p>${burden}${u.cls === "肉の量が先" ? `<p>${explain(u.why)}</p>` : ""}
+    ${ask ? `<p class="band-ask"><b>工場に確かめたいこと：</b>${u.needSealedQuestion ? "密封して加熱殺菌しているか、" : ""}完成品の pH と水分活性。ご入力いただくと、当たるかどうかが分かります。</p>` : ""}
+    <details class="band-more"><summary>次の内容をご確認ください（${[lacf || af ? "道の選び方" : "", (u.also || []).length ? "ほかに当たる決まり" : "", ask ? "数値の入力" : "", "くわしい説明"].filter(Boolean).join("・")}）</summary>${moreBody}</details>
   </div>`;
 }
 
@@ -681,12 +681,13 @@ function euBand(c) {
   if (!e.found.length) return `<div class="outlook usclass ol-ask"><span class="tier">EU：動物由来の原料</span><p class="ol-main">ラベルからは、動物由来の原料を確認できませんでした。</p><p>エキスや調味料の中身に入っていることがあります。「動物由来の原料は入っていますか」と、仕入先にご確認ください。</p></div>`;
   const row = c.items.find((i) => i.rowId === "EU-X1");
   const ways = shortWays(row?.workaround);
-  return `<div class="outlook usclass ol-way"><span class="tier">EU：動物由来の原料</span>
+  return `<div class="outlook usclass band ol-way"><span class="tier">EU：動物由来の原料</span>
     ${(e.fish || e.found).length ? `<p class="ol-main">${esc((e.fish || e.found).join("、"))}は、EU向けに認められた工場で作った物しか使えません。</p>` : ""}
     ${(e.other || []).length ? `<p${(e.fish || []).length ? "" : ` class="ol-main"`}>${esc(e.other.join("、"))}にも、EU向けに認められた工場の物であることなどの条件があります。</p>` : ""}
+    <p class="band-ask"><b>仕入先に確かめたいこと：</b>「この原料は、EU向けに認められた工場で作っていますか」</p>
+    <details class="band-more"><summary>次の内容をご確認ください（回避策・量の扱い）</summary>
     <p>量が少なくても同じです（割合による免除はありません）。</p>
-    <p><b>仕入先に確かめたいこと：</b>「この原料は、EU向けに認められた工場で作っていますか」</p>
-    ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}</div>`;
+    ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}</details></div>`;
 }
 // 中国の見せ場：最後に加工した工場と主な原料が、輸入を止めている10都県か
 function cnBand(c) {
@@ -704,9 +705,12 @@ function cnBand(c) {
   const ask = !["止まる", "10都県の外"].includes(o.state);
   const after = o.state === "10都県の外" ? `<p>ただし、産地の証明書、最後に保管する場所と輸送経路、工場の登録の確認が要ります。</p>` : "";
   const way = o.state === "止まる" ? `<div class="way"><b>回避策</b><ul><li>10都県の外の工場で作り、主な原料も10都県の外のものにする<div class="remain">工場だけでなく、主な原料の産地も変える大きな変更が必要です</div></li></ul></div>` : "";
-  return `<div class="outlook usclass ${tone}"><span class="tier">中国：工場と原料の産地</span><p class="ol-main">${esc(head)}</p><p>${explain(o.why)}${asOf ? `（確認日 ${esc(asOf)}）` : ""}</p>${after}${way}
+  return `<div class="outlook usclass band ${tone}"><span class="tier">中国：工場と原料の産地</span><p class="ol-main">${esc(head)}</p>
+    ${ask ? `<p class="band-ask"><b>確かめたいこと：</b>最後に加工した工場と、主な原料の都道府県。ご入力いただくと、止まるかどうかが分かります。</p>` : ""}${way}
+    <details class="band-more"><summary>次の内容をご確認ください（理由・対象の10都県${ask ? "・入力" : ""}）</summary>
+    <p>${explain(o.why)}${asOf ? `（確認日 ${esc(asOf)}）` : ""}</p>${after}
     <details class="more"><summary>対象の10都県を確かめる</summary><p>福島・宮城・茨城・栃木・群馬・新潟・埼玉・千葉・東京・長野。最後に加工した所か、主な原料（重さで一番多い原料）がここだと、工場が登録済みでも出せません。ほかの原料の産地は問われません（農林水産省の公表資料）。</p></details>
-    ${ask ? `<div class="usask"><div class="qin"><label class="qf"><span>最後に加工した工場と、主な原料の都道府県</span><input data-q="主な原料の産地" placeholder="例：工場は静岡県、原料も静岡県" value="${esc(state.extraAnswers["主な原料の産地"] || "")}"></label></div><button class="primary rerun2">入力した内容で、もう一度チェックする</button></div>` : ""}</div>`;
+    ${ask ? `<div class="usask"><div class="qin"><label class="qf"><span>最後に加工した工場と、主な原料の都道府県</span><input data-q="主な原料の産地" placeholder="例：工場は静岡県、原料も静岡県" value="${esc(state.extraAnswers["主な原料の産地"] || "")}"></label></div><button class="primary rerun2">入力した内容で、もう一度チェックする</button></div>` : ""}</details></div>`;
 }
 
 // 判定のしくみの図（論理の組み立て）。縦に並べ、AIの所と固定のルールの所を淡い2色で分ける
@@ -790,9 +794,11 @@ function outlook(c) {
     // 上の帯に回避策が出ている行（EUの動物由来の原料）は、同じ回避策を繰り返さない
     const inBand = x.rowId === "EU-X1" && c.euAnimal?.found?.length;
     const ways = v.tier === "回避策がある" && !inBand ? shortWays(x.workaround) : [];
-    return `<li><b>${explain(plainTitle(x.title))}</b>${inBand ? `<p>回避策は、上の「動物由来の原料」のとおりです。</p>` : ""}
+    // 課題の名前だけを見せ、回避策と理由は開いて読む（藤井さん 11/6：細部は後ろへ）
+    return `<li><b>${explain(plainTitle(x.title))}</b>${inBand ? `<span class="hint">（回避策は、上の「動物由来の原料」のとおりです）</span>` : ""}
+      <details class="more"><summary>${ways.length ? `回避策と理由を見る（回避策 ${ways.length}つ）` : "理由を見る"}</summary>
       ${ways.length ? `<div class="way"><b>回避策</b><ul>${ways.map((w) => `<li>${explain(w.head)}${w.remain ? `<div class="remain">残ること：${explain(w.remain)}</div>` : ""}</li>`).join("")}</ul></div>` : ""}
-      <details class="more"><summary>くわしく</summary>${x.reason ? `<p>${explain(x.reason)}</p>` : ""}${x.workaround ? `<p>${explain(x.workaround)}</p>` : ""}</details></li>`;
+      ${x.reason ? `<p>${explain(x.reason)}</p>` : ""}${x.workaround && !ways.length ? `<p>${explain(x.workaround)}</p>` : ""}</details></li>`;
   };
   return usClassBand(c) + euBand(c) + cnBand(c) + `<div class="outlook ${MSG[0]}"><span class="tier">${esc(tierWord(v.tier))}</span>
     <p class="ol-main">${MSG[1]}</p>${MSG[2] ? `<p>${MSG[2]}</p>` : ""}
