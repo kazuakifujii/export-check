@@ -737,7 +737,7 @@ function flowMap(c) {
   const hasReg = live.some((i) => i.level === "直せば出せる" && ["施設", "交差", "入口"].includes(i.box));
   const step = (n, h, body, par) => `<div class="flow-step ${par ? "par" : ""}"><div class="flow-h"><span class="step">${n}</span>${h}${par ? `<span class="par-tag">同時に</span>` : ""}</div><div class="flow-lane">${body}</div></div>`;
   const ar = `<div class="flow-arrow">→</div>`;
-  return `<details class="flow" open><summary>進め方の図</summary>
+  return `<details class="flow" open><summary>輸出に向けて</summary>
     <div class="flow-row">
       ${step(1, "確認", `<ul>${people.map((p) => `<li>${p}に確認</li>`).join("")}</ul><p class="hint">登録が要るか、どのくらい時間がかかるかも、ここで確かめます。商社にまとめて相談することもできます。</p>`, true)}${ar}
       ${step(2, "判断", `<p>輸入者の受け入れ見込みと費用を確かめて、輸出するかを決めます。</p><p class="hint">この道具では費用は出ません。</p>`)}${ar}
