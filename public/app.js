@@ -192,8 +192,8 @@ function renderCountry(c) {
   const upList = upItems.slice(0, 4).map((i) => `${plainTitle(i.title).slice(0, 24)}（${i.upcoming.map((d) => d.date).join("・")}）`).join("、");
   let html = outlook(c) + `<div class="coverage">
     <p><b>登録した決まり ${c.noteRows}行を、すべて照合しました（${c.checkedRows}/${c.noteRows}）。</b>
-    この商品に当てはまったのは${applied}行です。当てはまらなかった${s["対象外"] || 0}行も、下で開いて確かめられます。${s["確認が必要"] ? `情報が足りない${s["確認が必要"]}行は、答えを作らずに「確かめること」にしています。` : ""}</p>
-    <p class="split"><span class="tag ai">AI</span>ラベルの文字を読み取り、各行に照合します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、プログラムの決まったルールで判定します。</p>
+    この商品に当てはまったのは${applied}行です。当てはまらなかった${s["対象外"] || 0}行も、下で開いて確かめられます。${s["確認が必要"] ? `<b>情報が足りない${s["確認が必要"]}行は、答えを作らずに「確かめること」にしています。</b>` : ""}</p>
+    <p class="split"><span class="tag ai">AI</span>ラベルの文字を読み取り、決まりの各行との対応を整理します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、プログラムの決まったルールで判定します。</p>
     ${upN ? `<p class="hint">これから変わる決まり ${upN}件：${esc(upList)}${upN > 4 ? " ほか" : ""}</p>` : ""}
     <p class="hint">決まりの確認日 ${esc(state.result.asOf)}。輸出相談の準備用です。出荷の前に、輸入者とご確認ください。</p>
   </div>${flowMap(c)}
@@ -255,7 +255,7 @@ function renderCountry(c) {
               ? `<select data-q="${esc(f.key)}"><option value=""></option>${f.select.map((o) => `<option ${state.extraAnswers[f.key] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
               : `<input data-q="${esc(f.key)}" placeholder="${esc(f.placeholder || "")}" value="${esc(state.extraAnswers[f.key] || "")}">`
           }</label>`).join("")
-        : `<input data-q="${esc(i.rowId)}の答え" list="ansChoices" placeholder="分かる範囲でご記入ください" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
+        : `<input data-q="${esc(i.rowId)}の答え" list="ansChoices" placeholder="例：工場に確認中です／まだ決まっていません" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
       const why = fields.map((f) => f.why).filter(Boolean).join(" ") || i.questionWhy || i.reason;
       const who = whoGroup(i.askWho, i.todoKind);
       if (firstThree.length < 3) { firstThree.push(qHtml(i, inputs, why, who)); return; }
@@ -599,12 +599,12 @@ function renderAnnotated() {
   const more = rest.length ? `<p class="a3-rest">ほかの国も並べる：${rest.map((c) => `<button class="ghost nextc2" data-c="${c}">${COUNTRY_NAMES[c]}でチェックする</button>`).join("")}</p>` : "";
   const photo = state.image ? `<details class="al-photo"><summary>元の写真と見比べる</summary><img src="data:${esc(state.mediaType)};base64,${state.image}" alt="ラベルの写真"></details>` : "";
   $("#countryBody").innerHTML = `<p class="hint">同じラベルの行の横に、国ごとの指摘を並べました。押すと中身が開きます。見立てだけで輸出先を決めず、売り先や費用とあわせて輸入者と相談してください。</p>${more}${photo}
+    <p class="legend"><span class="dot lv-stop"></span>出荷できない条件 <span class="dot lv-fix"></span>直す所 <span class="dot lv-ask"></span>確かめること <span class="dot lv-add"></span>輸出用ラベルで足す所</p>
     <div class="annot3" style="--n:${cs.length}">
       <div class="a3-row a3-top"><div></div>${head}</div>
-      ${row("輸出前に確かめること（ラベルだけでは済まない：工場・原料・手続き）", lines.length, "al-missing al-band", "ラベルのどの行にも対応しない項目です。写真を読むだけでは出てこない条件を、決まりの側から確かめています。")}
+      ${row("輸出前に確かめること（ラベルだけでは済まない：工場・原料・手続き）", lines.length, "al-missing al-band", "ラベルに書いていなくても、確かめが必要な項目です。写真を読むだけでは出てこない条件を、決まりの側から確かめています。")}
       ${lines.map((l, k) => row(l, k)).join("")}
-    </div>
-    <p class="legend"><span class="dot lv-stop"></span>出荷できない条件 <span class="dot lv-fix"></span>直す所 <span class="dot lv-ask"></span>確かめること <span class="dot lv-add"></span>輸出用ラベルで足す所</p>`;
+    </div>`;
   document.querySelectorAll(".nextc2").forEach((b) => b.addEventListener("click", () => run(false, b.dataset.c)));
 }
 
@@ -684,7 +684,7 @@ function cnBand(c) {
   const o = c.cnOrigin;
   if (!o) return "";
   const asOf = state.result?.noteConfirmedOn || state.result?.asOf || "";
-  const tone = { 止まる: "ol-stop", "10都県の外": "ol-go" }[o.state] || "ol-ask";
+  const tone = { 止まる: "ol-stop", "10都県の外": "ol-go" }[o.state] || "ol-neutral";
   const head = {
     止まる: `${o.where === "工場" ? "工場" : "主な原料"}が${(o.prefs || []).join("・")}なので、この産地のままでは中国に出せません。`,
     "10都県の外": "産地による停止には、当たらない見込みです。",
@@ -730,7 +730,7 @@ function flowMap(c) {
       ${step(1, "確認", `<ul>${people.map((p) => `<li>${p}に確認</li>`).join("")}</ul><p class="hint">登録が要るか、どのくらい時間がかかるかも、ここで確かめます。商社にまとめて相談することもできます。</p>`, true)}${ar}
       ${step(2, "判断", `<p>輸入者の受け入れ見込みと費用を確かめて、輸出するかを決めます。</p><p class="hint">この道具では費用は出ません。</p>`)}${ar}
       ${step(3, "準備", `<ul>${hasReg ? "<li>登録・届け出</li>" : ""}<li>輸出用のラベル</li></ul><p class="hint">ラベルの案は早めに作れます。表示の確定は最後です。</p>`, true)}${ar}
-      ${step(4, "出荷", `<p>出荷の段取り</p><p class="hint">段取り表を作ります。Claudeへの相談文も用意しています。</p>`)}
+      ${step(4, "出荷", `<p>出荷の段取り</p><p class="hint">出荷の段取り表を作ります。</p>`)}
     </div></details>`;
 }
 

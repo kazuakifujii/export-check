@@ -259,3 +259,9 @@ abbr.gl { text-decoration: underline dotted; text-underline-offset: 3px; cursor:
 .ratio-sub { font-size: 13px; color: #444; margin: 2px 0 4px; }
 .coverage .split { font-size: 13px; color: #333; } .coverage .split .tag { margin: 0 4px 0 8px; }
 .why-link a { margin-right: 12px; }
+
+/* 3ターン目 */
+.coverage { font-size: 15px; } .coverage p:first-child b { font-size: 17px; }
+.coverage .split { font-size: 14px; }
+.ratio-sub { font-size: 14px; color: var(--ink, #222); }
+.outlook.ol-neutral { border-color: var(--line); background: #fff; } .outlook.ol-neutral .tier { background: #5b6470; } .outlook.ol-neutral .ol-main { color: var(--ink, #222); }
