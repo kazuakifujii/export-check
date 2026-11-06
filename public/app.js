@@ -193,7 +193,7 @@ function renderCountry(c) {
   let html = outlook(c) + `<div class="coverage">
     <p><b>登録した決まり ${c.noteRows}行を、すべて照合しました（${c.checkedRows}/${c.noteRows}）。</b>
     この商品に当てはまったのは${applied}行です。当てはまらなかった${s["対象外"] || 0}行も、下で開いて確かめられます。${s["確認が必要"] ? `<b>情報が足りない${s["確認が必要"]}行は、答えを作らずに「確かめること」にしています。</b>` : ""}</p>
-    <p class="split"><span class="tag ai">AI</span>ラベルの文字を読み取り、決まりの各行との対応を整理します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、プログラムの決まったルールで判定します。</p>
+    <p class="split"><span class="tag ai">AI</span>食品表示の文字を読み取り、決まりの各行との対応を整理します。<span class="tag prog">ルール</span>低酸性食品の区分・動物由来の原料・産地は、プログラムの決まったルールで判定します。</p>
     ${upN ? `<p class="hint">これから変わる決まり ${upN}件：${esc(upList)}${upN > 4 ? " ほか" : ""}</p>` : ""}
     <p class="hint">決まりの確認日 ${esc(state.result.asOf)}。輸出相談の準備用です。出荷の前に、輸入者とご確認ください。</p>
   </div>${flowMap(c)}
@@ -206,7 +206,7 @@ function renderCountry(c) {
     ${s["出せない"] ? `<p><b class="g-stop">出荷できない条件があります（${s["出せない"]}）</b>　理由と、進むための条件をご確認ください。</p>` : ""}
     ${s["直せば出せる"] ? `<p><b class="g-fix">直す所があります（${s["直せば出せる"]}）</b>　表示の修正や、登録・証明書の準備です。直したあとで、もう一度確かめられます。</p>` : ""}
     ${s["確認が必要"] ? `<p><b class="g-ask">確かめること（${s["確認が必要"]}）</b>　どなたに聞けばよいかも、あわせてご案内します。</p>` : ""}
-    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが片づくまでは出荷を待ち、輸入者と確かめましょう。</p>` : `<p class="hint">決まりノートで確認した範囲では、問題になる条件は見つかっていません。出荷の前に、輸入者や窓口とご確認ください。</p>`}
+    ${s["出せない"] + s["直せば出せる"] + s["確認が必要"] ? `<p class="hint">これらが解決するまでは出荷を控え、輸入者への確認が必要です。</p>` : `<p class="hint">決まりノートで確認した範囲では、問題になる条件は見つかっていません。出荷の前に、輸入者や窓口とご確認ください。</p>`}
   </div>`;
 
   if (c.stoppedAtEntry) {
@@ -481,16 +481,16 @@ function whoGroup(askWho, todoKind) {
 
 function conceptMap() {
   return `<figure class="concept">
-    <p class="concept-lead">ラベルだけでなく、この3つをセットで準備すると、見落としなく輸出を進められます。</p>
-    <div class="cbox c-製品"><b>製品の要件</b><small>国によって決まりが違う。ラベルと原料を合わせる</small>
+    <p class="concept-lead">製品の要件だけでなく、製造施設の要件や、その商品特有の要件も確認が必要です。</p>
+    <div class="cbox c-製品"><b>製品の要件</b><small>国によって決まりが異なります。食品表示と原料を合わせる必要があります</small>
       <span class="ex">例</span><ul class="exl"><li>アレルゲンの対象が国ごとに違う（米国はごま、EUはセロリ・からしも）</li><li>日本で使える添加物・着色料が、使えない国がある</li><li>栄養成分の表示の様式が国ごとに違う</li></ul></div>
     <div class="carrow">→</div>
-    <div class="cbox c-交差"><b>この製品だから必要な要件</b><small>ラベルではなく、原料や作り方で工場・仕入先に求められること</small>
+    <div class="cbox c-交差"><b>この製品だから必要な要件</b><small>食品表示ではなく、原料や製法によって製造施設・仕入先に求められる要件です</small>
       <span class="ex">例</span><ul class="exl"><li>常温のレトルトは、米国で殺菌工程の届け出が要ることがある</li><li>鰹節入りは、その鰹節を作った工場がEU向けに認められている必要がある</li></ul></div>
     <div class="carrow">←</div>
-    <div class="cbox c-施設"><b>施設の要件</b><small>作る・保管する場所の準備。要る国と要らない国がある</small>
+    <div class="cbox c-施設"><b>施設の要件</b><small>製造・保管する施設の要件です。国によって要否が異なります</small>
       <span class="ex">例</span><ul class="exl"><li>工場の登録が要る国がある（米国・中国など）</li><li>ラベルを貼るだけの倉庫も、登録が要ることがある</li><li>衛生管理の計画や、出荷ごとの届け出</li></ul></div>
-    <figcaption>この道具は、ラベルに書かれていない条件も含めて、決まりをひとつずつ照合します。</figcaption>
+    <figcaption>食品表示に書かれていない条件も含めて、決まりを1行ずつ照合します。</figcaption>
   </figure>`;
 }
 $("#conceptHead").innerHTML = conceptMap();
@@ -501,7 +501,7 @@ function card(i) {
   // ルールで決めた所と、AIが読んで照合した所を分けて見せる（議論 11/6）
   const prog = i.decidedBy === "program" ? `<span class="tag prog">ルールで判定</span>` : `<span class="tag ai">AIが読み取り、決まりと照合</span>`;
   const flags = i.flags.length ? `<div class="flags">言い切れないので「確認が必要」にしました：${i.flags.map(esc).join("／")}</div>` : "";
-  const quote = i.labelQuote ? `<div class="q-label">ラベルから読み取り（AI）：「${esc(i.labelQuote)}」</div>` : i.absentOnLabel ? `<div class="q-label">ラベル：この欄はありません（決まりの側から確かめた項目です）</div>` : "";
+  const quote = i.labelQuote ? `<div class="q-label">食品表示から読み取り（AI）：「${esc(i.labelQuote)}」</div>` : i.absentOnLabel ? `<div class="q-label">食品表示：この欄はありません（決まりの側から確認した項目です）</div>` : "";
   const answer = i.answerKeys.length ? `<div class="q-label">答え：${i.answerKeys.map(esc).join("、")}</div>` : "";
   const nq = i.noteQuote ? `<div class="q-note">決まり（ノートの原文）：「${esc(i.noteQuote)}」</div>` : "";
   const link = i.urls[0] ? `<a href="${esc(i.urls[0])}" target="_blank" rel="noopener">根拠を見る</a>` : "";
@@ -594,7 +594,7 @@ function renderAnnotated() {
     const v = c.verdict || { tier: "進められる見込み" };
     const cls = { 入口で無理: "ol-stop", 現実的に厳しい: "ol-hard", 回避策がある: "ol-way", 進められる見込み: "ol-go", 産地しだい: "ol-ask" }[v.tier];
     const wall = (v.items || [])[0];
-    return `<div class="a3-head outlook ${cls}"><div><b>${esc(c.name)}</b> <span class="tier">${esc(tierWord(v.tier))}</span></div>${wall ? `<div class="a3-wall">まず越えたい所：${explain(plainTitle(wall.title))}</div>` : ""}</div>`;
+    return `<div class="a3-head outlook ${cls}"><div><b>${esc(c.name)}</b> <span class="tier">${esc(tierWord(v.tier))}</span></div>${wall ? `<div class="a3-wall">主な課題：${explain(plainTitle(wall.title))}</div>` : ""}</div>`;
   }).join("");
   const more = rest.length ? `<p class="a3-rest">ほかの国も並べる：${rest.map((c) => `<button class="ghost nextc2" data-c="${c}">${COUNTRY_NAMES[c]}でチェックする</button>`).join("")}</p>` : "";
   const photo = state.image ? `<details class="al-photo"><summary>元の写真と見比べる</summary><img src="data:${esc(state.mediaType)};base64,${state.image}" alt="ラベルの写真"></details>` : "";
@@ -602,7 +602,7 @@ function renderAnnotated() {
     <p class="legend"><span class="dot lv-stop"></span>出荷できない条件 <span class="dot lv-fix"></span>直す所 <span class="dot lv-ask"></span>確かめること <span class="dot lv-add"></span>輸出用ラベルで足す所</p>
     <div class="annot3" style="--n:${cs.length}">
       <div class="a3-row a3-top"><div></div>${head}</div>
-      ${row("輸出前に確かめること（ラベルだけでは済まない：工場・原料・手続き）", lines.length, "al-missing al-band", "ラベルに書いていなくても、確かめが必要な項目です。写真を読むだけでは出てこない条件を、決まりの側から確かめています。")}
+      ${row("輸出前に確かめること（ラベルだけでは済まない：工場・原料・手続き）", lines.length, "al-missing al-band", "食品表示に書かれていなくても、確認が必要な項目です。写真を読むだけでは分からない条件を、決まりの側から確認しています。")}
       ${lines.map((l, k) => row(l, k)).join("")}
     </div>`;
   document.querySelectorAll(".nextc2").forEach((b) => b.addEventListener("click", () => run(false, b.dataset.c)));
@@ -758,8 +758,8 @@ function ratioLine(c) {
   const link = `<p class="why-link"><a href="#" class="open-logic">なぜこの判定か（AIとルールの分担、根拠）を見る</a>　<a href="#" class="go-q">確かめることの一覧へ</a></p>`;
   if (!beyond) return link;
   // 数は下の「出荷できない条件・直す所・確かめること」の合計を、ラベルの中か外かで分けたもの（議論 11/6：数をそろえる）
-  return `<p class="ratio">ラベルとあわせて、工場・原料・手続きで <b>${beyond}件</b> を準備すると、輸出に近づきます。</p>
-    <p class="ratio-sub">出荷できない条件・直す所・確かめること 計${live.length}件のうち、ラベルに関わる所は${lab}件です${add ? `（ほかに、輸出用ラベルで足す所が${add}件）` : ""}。ラベルを直すだけでは、${beyond}件は残ります。</p>${link}`;
+  return `<p class="ratio">食品表示のほかに、製造施設・原料・手続きで <b>${beyond}件</b> の確認や準備が必要です。</p>
+    <p class="ratio-sub">出荷できない条件・直す所・確かめること 計${live.length}件のうち、食品表示に関わるものは${lab}件です${add ? `（ほかに、輸出用ラベルで足す所が${add}件）` : ""}。食品表示を直すだけでは、${beyond}件は残ります。</p>${link}`;
 }
 function outlook(c) {
   const name = esc(c.name);
@@ -771,11 +771,11 @@ function outlook(c) {
   const beyond = beyondAll.slice(0, 3);
   const beyondMore = beyondAll.length > 3 ? ` ほか${beyondAll.length - 3}件` : "";
   const MSG = {
-    入口で無理: ["ol-stop", `${name}へは、今の仕様のままでは輸出できません。`, "国として受け入れを止めている条件に該当します。ほかの輸出先や別の進め方も含めて、輸入者や窓口と一緒に探しましょう。"],
-    現実的に厳しい: ["ol-hard", `${name}へは、大きな課題があります。`, "制度上の道はありますが、現実的な方法は見つかっていません。ほかの輸出先や別の進め方も含めて、輸入者や窓口と一緒に探しましょう。"],
-    回避策がある: ["ol-way", `${name}へは、回避策を取れば輸出を目指せます。`, "先に解決したい課題と、その進め方は次のとおりです。"],
-    進められる見込み: ["ol-go", `${name}へは、輸出を進められる見込みです。`, "確認した範囲では、大きな壁は見つかっていません。残る条件を確かめながら進めましょう。"],
-    産地しだい: ["ol-ask", `${name}へは、工場と主な原料の産地が分かれば、輸出の道が見えてきます。`, "産地が10都県の外なら、ほかに大きな壁は見つかっていません。"],
+    入口で無理: ["ol-stop", `${name}へは、今の仕様のままでは輸出できません。`, "国として受け入れを止めている条件に該当します。ほかの輸出先や別の進め方も含めて、輸入者や窓口への相談が必要です。"],
+    現実的に厳しい: ["ol-hard", `${name}へは、大きな課題があります。`, "制度上の道はありますが、現実的な方法は見つかっていません。ほかの輸出先や別の進め方も含めて、輸入者や窓口への相談が必要です。"],
+    回避策がある: ["ol-way", `${name}へは、回避策を取れば輸出できる見込みです。`, "解決が必要な課題と、その回避策は次のとおりです。"],
+    進められる見込み: ["ol-go", `${name}へは、輸出できる見込みです。`, "確認した範囲では、大きな課題は見つかっていません。残る条件の確認が必要です。"],
+    産地しだい: ["ol-ask", `${name}へは、製造施設と主な原料の産地の確認が必要です。`, "産地が10都県の外であれば、ほかに大きな課題は見つかっていません。"],
   }[v.tier];
   const li = (x) => {
     // 上の帯に回避策が出ている行（EUの動物由来の原料）は、同じ回避策を繰り返さない

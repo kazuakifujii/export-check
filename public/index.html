@@ -10,8 +10,8 @@
 <header class="top">
   <div class="brand">
     <h1>輸出チェック</h1>
-    <p class="lead">国内の商品を、海外へ。ラベルの写真から、輸出できるか、どうすればできるかをご案内します。</p>
-    <p class="sublead">ラベルだけでなく、工場や手続きも確認します。輸出相談の準備にお使いください（輸入や通関を保証するものではありません）。</p>
+    <p class="lead">日本の食を海外へ。食品表示の写真から、輸出できそうか、どうすればできるかを調査します。</p>
+    <p class="sublead">食品表示だけでなく、製造施設や手続きの要件も確認します。輸出相談の準備にお使いください（輸入や通関を保証するものではありません）。</p>
   </div>
   <nav class="tabs" role="tablist">
     <button class="tab active" data-tab="check">チェック</button>
@@ -24,23 +24,23 @@
 <section id="tab-check" class="tabpane active">
   <div class="input-grid">
     <div class="panel">
-      <h2><span class="step">1</span>ラベルを入れる</h2>
+      <h2><span class="step">1</span>食品表示の写真を入れる</h2>
       <div class="drop" id="drop">
         <input type="file" id="file" accept="image/*" hidden>
-        <p>ラベルの写真をここに置くか、<button class="link" id="pick">写真を選ぶ</button></p>
+        <p>食品表示の写真をここに置くか、<button class="link" id="pick">写真を選ぶ</button></p>
         <img id="preview" alt="" hidden>
       </div>
       <textarea id="labelText" hidden></textarea>
       <button class="ghost" id="sample">サンプルで試す（架空の商品）</button>
-      <p class="hint">ラベルの写真が手元に無いときは、架空の「とうもろこしごはんの素」のラベルで試せます。</p>
+      <p class="hint">写真が手元に無いときは、架空の「とうもろこしごはんの素」の食品表示で試せます。</p>
     </div>
 
     <div class="panel">
-      <h2><span class="step">2</span>出したい国でチェックする</h2>
+      <h2><span class="step">2</span>輸出先の国を選んで調査する</h2>
       <label class="concern">ほかに気になること（あれば）
         <textarea id="concern" rows="3" placeholder="例：英語ラベルは商社の倉庫で貼る予定／原料のかつお節は鹿児島の工場から仕入れている／EUの小売店に置きたい"></textarea>
       </label>
-      <p class="hint">国ごとに調べます。続けてほかの国も調べられます。</p>
+      <p class="hint">国ごとに調査します。続けてほかの国も調査できます。</p>
       <details class="settings"><summary>詳しい設定</summary>
         <div class="asof"><label>判定日 <input type="date" id="asOf"></label>
         <span class="hint">この日に施行されている決まりで判定します（施行前の決まりは「これから変わる」と出します）。</span></div>
@@ -57,9 +57,9 @@
   <div id="result" hidden>
     <div class="result-grid">
       <aside class="panel label-pane">
-        <h2>読み取ったラベル</h2>
+        <h2>読み取った食品表示</h2>
         <ol id="labelLines" class="label-lines"></ol>
-        <p class="hint">右の判定にマウスを乗せると、根拠にした行が光ります。</p>
+        <p class="hint">右の判定にマウスを乗せると、根拠にした行が強調されます。</p>
       </aside>
       <div class="panel">
         <div class="country-tabs" id="countryTabs"></div>
@@ -83,7 +83,7 @@
 </main>
 
 <footer class="foot">
-  輸出相談の準備にお使いください。出荷の前に、輸入者とご確認ください。
+  輸出相談の準備にお使いください。出荷の前に、輸入者への確認が必要です。
 </footer>
 <script src="samples.js"></script>
 <script src="app.js"></script>
