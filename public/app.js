@@ -759,7 +759,7 @@ function ratioLine(c) {
   if (!beyond) return link;
   // 数は下の「出荷できない条件・直す所・確かめること」の合計を、ラベルの中か外かで分けたもの（議論 11/6：数をそろえる）
   return `<p class="ratio">ラベルとあわせて、工場・原料・手続きで <b>${beyond}件</b> を準備すると、輸出に近づきます。</p>
-    <p class="ratio-sub">出荷できない条件・直す所・確かめること 計${live.length}件のうち、ラベルの中で直せるのは${lab}件です${add ? `（ほかに、輸出用ラベルで足す所が${add}件）` : ""}。ラベルを直すだけでは、${beyond}件は残ります。</p>${link}`;
+    <p class="ratio-sub">出荷できない条件・直す所・確かめること 計${live.length}件のうち、ラベルに関わる所は${lab}件です${add ? `（ほかに、輸出用ラベルで足す所が${add}件）` : ""}。ラベルを直すだけでは、${beyond}件は残ります。</p>${link}`;
 }
 function outlook(c) {
   const name = esc(c.name);
