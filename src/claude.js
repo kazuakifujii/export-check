@@ -44,15 +44,12 @@ export async function askJson({ system, content, schema, maxTokens = 32000 }) {
 }
 
 // 手元の試験用：API の代わりに、PC にログイン済みの Claude Code（claude -p）で判定する。
-// 画像は渡せないので、文字のラベルだけ。公開する道具の本体は API を使う。
+// 写真も読めるように、メッセージを stream-json の形で渡す（藤井さん 11/7）。公開する道具の本体は API を使う。
 let loggedOnce = false;
 function askJsonViaClaudeCode({ system, content, schema }) {
   const parts = Array.isArray(content) ? content : [{ type: "text", text: content }];
-  if (parts.some((p) => p.type !== "text")) {
-    return Promise.reject(new Error("Claude Code での判定は文字のラベルだけに対応しています"));
-  }
-  const prompt = parts.map((p) => p.text).join("\n\n");
-  const args = ["-p", "--output-format", "json", "--model", MODEL, "--effort", EFFORT, "--tools", "", "--system-prompt", system, "--json-schema", JSON.stringify(schema)];
+  const message = JSON.stringify({ type: "user", message: { role: "user", content: parts } });
+  const args = ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose", "--model", MODEL, "--effort", EFFORT, "--tools", "", "--system-prompt", system, "--json-schema", JSON.stringify(schema)];
   // API の鍵を渡すと Claude Code が鍵の残高で動くので、鍵を外してプラン（ログイン）で動かす
   const env = { ...process.env };
   delete env.ANTHROPIC_API_KEY;
@@ -66,7 +63,10 @@ function askJsonViaClaudeCode({ system, content, schema }) {
     child.on("error", reject);
     child.on("close", (code) => {
       try {
-        const r = JSON.parse(out);
+        // 1行に1つの JSON が流れてくる。最後の「result」の行に答えが入っている
+        const line = out.split("\n").filter((l) => l.includes('"type":"result"')).pop();
+        if (!line) throw new Error("Claude Code の答えが読めません");
+        const r = JSON.parse(line);
         if (r.is_error || !r.structured_output) throw new Error(r.result || "Claude Code の答えが読めません");
         if (!loggedOnce) {
           loggedOnce = true;
@@ -84,6 +84,6 @@ function askJsonViaClaudeCode({ system, content, schema }) {
         reject(new Error(`Claude Code での判定に失敗しました（終了コード ${code}）：${e.message} ${err.slice(0, 300)}`));
       }
     });
-    child.stdin.end(prompt);
+    child.stdin.end(message + "\n");
   });
 }
