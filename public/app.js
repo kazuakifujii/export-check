@@ -553,7 +553,7 @@ function card(i) {
   </details>`;
 }
 
-// ---------- 決まりノート ----------
+// ---------- 輸出ルール表 ----------
 let noteCache = null;
 async function loadNote() {
   if (!noteCache) noteCache = await (await fetch("/api/note")).json();
@@ -749,7 +749,7 @@ function logicMap() {
   const ar = `<div class="lg-arrow">↓</div>`;
   return `<details class="flow logic"><summary>なぜこの判定か（AIとルールの分担、根拠）</summary><div class="lg-col">
     ${box("lg-ai", "① ラベルを読む（AI）", "写真の文字をClaudeが読み取ります")}${ar}
-    ${box("lg-ai", "② 決まりノートと照合（AI）", "3つの要件と入口の条件を、1項目ずつ当てはめます")}${ar}
+    ${box("lg-ai", "② 輸出ルール表と照合（AI）", "3つの要件と入口の条件を、1項目ずつ当てはめます")}${ar}
     ${box("lg-rule", "③ 数値と地名は固定のルール", "pH・水分活性、10都県などは、毎回同じ答えになるよう自動で判定します")}${ar}
     ${box("lg-rule", "④ 根拠の確認", "根拠の文が見つからない判定は「確かめること」に下げます")}${ar}
     ${box("", "⑤ 見立てと次の一歩", "4つの見立てのどれかと、だれに何を確認するかをご案内します")}

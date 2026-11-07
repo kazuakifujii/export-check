@@ -14,7 +14,7 @@ const app = express();
 app.use(express.json({ limit: "20mb" }));
 app.use(express.static(path.join(here, "..", "public")));
 
-// 決まりノートをそのまま見せる（画面の「決まりノート」タブ）
+// 輸出ルール表をそのまま見せる（画面の「輸出ルール表」タブ）
 app.get("/api/note", (req, res) => {
   const { note, markdown, path: notePath } = loadNote();
   res.json({ confirmedOn: note.confirmedOn, rows: note.rows, markdown, file: path.basename(notePath) });

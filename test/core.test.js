@@ -8,7 +8,7 @@ import { runCheck } from "../src/check.js";
 
 const { note } = loadNote();
 
-test("決まりノートを全部の行読める", () => {
+test("輸出ルール表を全部の項目読める", () => {
   assert.ok(note.rows.length >= 80, `行数 ${note.rows.length}`);
   for (const c of ["US", "EU", "CN"]) {
     for (const b of ["施設", "交差", "製品"]) {
