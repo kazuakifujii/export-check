@@ -190,7 +190,7 @@ function renderCountry(c) {
   const upItems = c.items.filter((i) => i.upcoming?.length && i.level !== "対象外");
   const upN = upItems.length;
   const upList = upItems.slice(0, 4).map((i) => `${plainTitle(i.title).slice(0, 24)}（${i.upcoming.map((d) => d.date).join("・")}）`).join("、");
-  // 並び：見立て → 件数 → 3つの要件 → 輸出に向けて → 確かめること → 前提と補足（細かい前提は後ろへ。藤井さん 11/6）
+  // 並び：見立て → 件数 → 3つの要件 → 確かめること → 前提と補足（細かい前提は後ろへ。藤井さん 11/6。「輸出に向けて」の図は外した 11/7）
   let html = outlook(c) + `
   <div class="summary">
     ${chip("出せない", "出荷できない条件")}${chip("直せば出せる", "直す所")}${chip("確認が必要", "確かめること")}
@@ -235,11 +235,10 @@ function renderCountry(c) {
     </section>`;
   }
   html += `</div>`;
-  html += flowMap(c);
 
   const qs = c.items.filter((i) => i.status === "分からない" && i.question && !i.setup).sort((x, y) => qPriority(x, state.country) - qPriority(y, state.country));
   if (qs.length) {
-    // 区分の中は「輸出に向けて」の確認の順（工場→仕入先→輸入者）に並べる（藤井さん 11/6）
+    // 区分の中は確認の順（工場→仕入先→輸入者）に並べる（藤井さん 11/6）
     if (state.qView !== "who") {
       const wi = (i) => { const k = WHO_GROUPS.findIndex((g) => g[0] === whoGroup(i.askWho, i.todoKind)); return k < 0 ? 99 : k; };
       qs.sort((x, y) => wi(x) - wi(y));
@@ -256,7 +255,7 @@ function renderCountry(c) {
               ? `<select data-q="${esc(f.key)}"><option value=""></option>${f.select.map((o) => `<option ${state.extraAnswers[f.key] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`
               : `<input data-q="${esc(f.key)}" placeholder="${esc(f.placeholder || "")}" value="${esc(state.extraAnswers[f.key] || "")}">`
           }</label>`).join("")
-        : `<input data-q="${esc(i.rowId)}の答え" list="ansChoices" placeholder="例：工場に確認中です／まだ決まっていません" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
+        : `<input data-q="${esc(i.rowId)}の答え" list="ansChoices" placeholder="自由にご記入ください（▼で例から選べます）" value="${esc(state.extraAnswers[i.rowId + "の答え"] || "")}">`;
       const why = fields.map((f) => f.why).filter(Boolean).join(" ") || i.questionWhy || i.reason;
       const who = whoGroup(i.askWho, i.todoKind);
       // 分け方：要件の区分ごと（既定、藤井さん 11/6）か、聞く相手ごと。最初の3件を別にせず、全部まとめる（藤井さん 11/6）
@@ -272,7 +271,7 @@ function renderCountry(c) {
     const rowsHtml = order.filter((w) => groups.has(w)).map((w) =>
       `<details class="qgroup"><summary>${esc(w)}${state.qView !== "who" ? "" : "に確認"}（${groups.get(w).length}件）</summary>${w === "相手の国の輸入者" ? `<p class="hint">輸入者がまだ決まっていなければ、まず候補を探すところから始めます。</p>` : ""}${groups.get(w).join("")}</details>`).join("");
     html += `<section class="questions"><h3>まずは、ここから確かめましょう</h3>
-      <p class="progress">「輸出に向けて」の ① 確認 にあたる ${qs.length}件です。分かるところからご入力ください。</p>
+      <p class="progress">確かめることは ${qs.length}件です。分かるところからご入力ください。答えの欄は自由に書き込めます。▼で「社内に聞きます」などの例から選ぶこともできます。</p>
       <div class="qsw"><span class="hint">見方：</span><button class="ghost ${state.qView !== "who" ? "on" : ""}" data-qv="box">要件の区分ごと</button><button class="ghost ${state.qView === "who" ? "on" : ""}" data-qv="who">聞く相手ごと</button><span class="hint">切り替えても、入力した答えは消えません。</span></div>
       ${rowsHtml}
       <button class="primary" id="rerun">入力した内容で、もう一度チェックする</button></section>`;
@@ -756,26 +755,6 @@ function logicMap() {
     ${box("", "⑤ 見立てと次の一歩", "4つの見立てのどれかと、だれに何を確認するかをご案内します")}
     <p class="hint"><span class="lg-key lg-ai"></span>AIが行う所　<span class="lg-key lg-rule"></span>固定のルールで決める所</p>
   </div></details>`;
-}
-
-// 進め方の図：確認（同時に）→ 判断 → 準備（同時に）→ 出荷。項目名は入れず、相手と段階だけ（議論 11/4）
-function flowMap(c) {
-  if (c.verdict?.tier === "入口で無理") return "";
-  const live = c.items.filter((i) => !i.setup && i.level !== "対象外");
-  const qs = live.filter((i) => i.status === "分からない" && i.question);
-  const who = new Set(qs.map((i) => whoGroup(i.askWho, i.todoKind)));
-  const people = [["工場の品質管理の担当", "工場"], ["原料の仕入れ先", "仕入先"], ["相手の国の輸入者", "輸入者"]].filter(([w]) => who.has(w)).map(([, n]) => n);
-  if (!people.includes("輸入者")) people.push("輸入者");
-  const hasReg = live.some((i) => i.level === "直せば出せる" && ["施設", "交差", "入口"].includes(i.box));
-  const step = (n, h, body, par) => `<div class="flow-step ${par ? "par" : ""}"><div class="flow-h"><span class="step">${n}</span>${h}${par ? `<span class="par-tag">同時に</span>` : ""}</div><div class="flow-lane">${body}</div></div>`;
-  const ar = `<div class="flow-arrow">→</div>`;
-  return `<details class="flow" open><summary>輸出に向けて</summary>
-    <div class="flow-row">
-      ${step(1, "確認", `<ul>${people.map((p) => `<li>${p}に確認</li>`).join("")}</ul><p class="hint">登録が要るか、どのくらい時間がかかるかも、ここで確かめます。商社にまとめて相談することもできます。</p>`, true)}${ar}
-      ${step(2, "判断", `<p>輸入者の受け入れ見込みと費用を確かめて、輸出するかを決めます。</p><p class="hint">この道具では費用は出ません。</p>`)}${ar}
-      ${step(3, "準備", `<ul>${hasReg ? "<li>登録・届け出</li>" : ""}<li>輸出用のラベル</li></ul><p class="hint">ラベルの案は早めに作れます。表示の確定は最後です。</p>`, true)}${ar}
-      ${step(4, "出荷", `<p>出荷の段取り</p><p class="hint">出荷の段取り表を作ります。</p>`)}
-    </div></details>`;
 }
 
 // 一番上の「見立てと次の一歩」（議論の結論 11/4：主役は輸出の可能性と次の一歩。確率は出さない）
