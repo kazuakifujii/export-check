@@ -24,9 +24,9 @@
 
 チャットのAIに日本のお菓子の食品表示を見せて「問題ないか」と聞くと、「問題は見当たりません」と答え、表示が必須の原料原産地（重さで一番多い原料の産地）の抜けを見落としました。AIは、書いてある物は確かめても、**無い欄は、聞かれなければ出てこないことがあります**。
 
-だから聞くのをやめ、127項目を一つずつ全部当てはめる形にしました。
+だから聞くのをやめ、133項目を一つずつ全部当てはめる形にしました。
 
-- **輸出ルール表の全項目を当てはめる**：Claude と米国・EU・中国の約50の公的資料（法令、当局の Q&A、JETRO など公的機関の解説）を読み込み、輸出で止まる所を127項目にまとめた輸出ルール表（2026年11月時点）の全項目に、Claude が「ある／無い／対象外／分からない」を付け、根拠を引用します。
+- **輸出ルール表の全項目を当てはめる**：Claude と米国・EU・中国の約60の公的資料（法令、当局の Q&A、JETRO など公的機関の解説、農水省・厚労省・水産庁の輸出の要綱、日本から持ち出す時の決まり）を読み込み、輸出で止まる所を133項目にまとめた輸出ルール表（2026年11月時点）の全項目に、Claude が「ある／無い／対象外／分からない」を付け、根拠を引用します。
 - **抜けはプログラムが埋める**：答えの無い項目は「分からない」で埋め、pH や産地のように数字や地名で決まる項目は判定表で決めます。
 - **引用を照合する**：引用した文が食品表示と輸出ルール表に本当にあるかを確かめ、無ければ「確認が必要」に下げます。
 
@@ -91,7 +91,7 @@
 
 作者が主にやり取りする相手は、クラウドで動く Claude Code の1人です。プログラミングの初心者である作者がしたのは、食品表示と輸出の決まりを知っている者として答えを確かめることだけで、設計・実装・資料調べ・答え合わせの段取りは、クラウドの Claude Code が指揮者になって分けました。
 
-- **ルール表は Claude が約50の公的資料を読んで下書きし、作者が確かめました。** 各項目に出典と確認の度合いを付けさせ、古い資料を見つけた時は新しい資料に合わせました。
+- **ルール表は Claude が約60の公的資料を読んで下書きし、作者が確かめました。** 各項目に出典と確認の度合いを付けさせ、古い資料を見つけた時は新しい資料に合わせました。
 - **サブエージェントで裏取りしました。** ルール表の下書きのあと、サブエージェント4本を並行して走らせ、① JETRO・農林水産省の相談事例、② 日本の食品会社あての FDA 警告書とその後の流れ、③ 判断が割れた項目の一次資料、④ 書類が法令の要求か商慣行か、を調べさせました。
 - **答え合わせを回しながら直しました。** API キーを使わずに Claude Code（`claude -p`）で判定できるようにして、11/4〜11/6 にアプリから639回呼び、558回で判定が返りました。残り81回は週あたりの利用上限に当たって返らず、上限が明けてから走らせ直しました。最初の見落とし5件のうち、4件はルール表の整え方で消え、1件は正解そのものが間違っていました。
 - **ほかの AI と議論させて磨きました。** 作者の PC の Claude Code（Remote Control で動かしました）と他社の AI を、審査員役や「初めて輸出を任された担当者」役にして、画面の言葉や提出文を講評させました。他社の AI につなぐ仕組みは、プログラミング初心者の作者には作れませんでした。そこで、作者の PC の Claude にブラウザを操作させ、人と同じように画面から話しかけてもらいました。指揮者の Claude が議長になり、出た指摘をぶつけ合わせました。採用する修正は作者が決めました。
@@ -106,7 +106,7 @@
 - **サブエージェント** [`.claude/agents/rule-source-checker.md`](.claude/agents/rule-source-checker.md)：国ごとに1本ずつ並行して動き、項目の出どころのページを開いて、今の文をそのまま引用し「変化なし／変化あり／開けなかった」を返します。書き込む道具は持たせていません。開けなかった時は、変化なしと決めつけません。
 - **フック** [`.claude/settings.json`](.claude/settings.json)：ルール表を書き換えた時だけ `npm test` を流し、表の形が崩れていたら Claude に知らせて直させます。
 
-11/7 に、127項目のうち中国の7項目で試しに動かしました（[下書き](rules/見直し/2026-11-07_試行_中国.md)）。中身の変化はありませんでしたが、この仕組みが表の穴を見つけました。根拠の Q&A の URL が表に書かれておらず、サブエージェントが開けなかったのです。ほかに出どころの書き方の直しが2か所ありました。作者が確かめたうえで、同じ日に表を直しました。
+11/7 に、中国の7項目で試しに動かしました（[下書き](rules/見直し/2026-11-07_試行_中国.md)）。中身の変化はありませんでしたが、この仕組みが表の穴を見つけました。根拠の Q&A の URL が表に書かれておらず、サブエージェントが開けなかったのです。ほかに出どころの書き方の直しが2か所ありました。作者が確かめたうえで、同じ日に表を直しました。
 
 ## ハッカソンの後
 
@@ -150,6 +150,8 @@ npm test                  # 鍵なしで確かめられる所の試験（表の�
 
 下の2つは実在の商品で確かめたため、データ・社名・商品名は公開していません。
 
+答え合わせは、ルール表が127項目だった時点（11/6）のものです。11/7 に国内資料と突き合わせて6項目を足しました（[点検の記録](rules/見直し/2026-11-07_国内資料の点検.md)）。
+
 **一般に流通している食品25件**：各項目に正解を付けて測り、見落としはありませんでした（379項目中369項目が一致、97%）。
 
 作り始めの1回目は見落としが5件ありました。4件はルール表の整え方で消え、1件は正解そのものが間違っていました。
@@ -175,8 +177,8 @@ npm test                  # 鍵なしで確かめられる所の試験（表の�
 ## English summary
 
 Export Check helps small Japanese food makers see, before shipping, whether a product can be exported to the US, EU and China, and what to do next.
-A chat AI checks what is written on a label, but a missing field may not come up unless you ask about it. So instead of asking, the tool applies all 127 items one by one.
-So Claude applies every item of a sourced export rule table (127 items drawn from about 50 official sources, including JETRO guides) to the label and quotes its evidence; the program fills unanswered items with "unknown", decides numeric items (pH, water activity, origin) with fixed tables, and verifies every quote.
+A chat AI checks what is written on a label, but a missing field may not come up unless you ask about it. So instead of asking, the tool applies all 133 items one by one.
+So Claude applies every item of a sourced export rule table (133 items drawn from about 60 official sources, including JETRO guides) to the label and quotes its evidence; the program fills unanswered items with "unknown", decides numeric items (pH, water activity, origin) with fixed tables, and verifies every quote.
 On 25 commercially available foods with item-level answer keys, it missed nothing (369 of 379 items matched). On about 100 of the author's own company products, checked for the first time after the rule table was tidied up, the results matched the company's internal review.
 All products, companies and addresses shown in this repository are fictional.
 
