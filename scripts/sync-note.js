@@ -1,5 +1,5 @@
-// 要件調査で更新された決まりノートを、このリポジトリの rules/ に取り込む。
-//   npm run sync-note -- <決まりノートのファイル>
+// 要件調査で更新された輸出ルール表を、このリポジトリの rules/ に取り込む。
+//   npm run sync-note -- <輸出ルール表のファイル>
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +8,7 @@ import { parseNote } from "../src/note.js";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const src = process.argv[2];
 if (!src || !fs.existsSync(src)) {
-  console.error("使い方：npm run sync-note -- <決まりノートのファイル>");
+  console.error("使い方：npm run sync-note -- <輸出ルール表のファイル>");
   process.exit(1);
 }
 const md = fs.readFileSync(src, "utf8");
@@ -17,7 +17,7 @@ if (rows.length < 10) {
   console.error(`表が読めません（${rows.length}行）。表の形が変わっていないか見てください。`);
   process.exit(1);
 }
-const dst = path.join(here, "..", "rules", "決まりノート.md");
+const dst = path.join(here, "..", "rules", "輸出ルール表.md");
 const before = fs.existsSync(dst) ? parseNote(fs.readFileSync(dst, "utf8")).rows.map((r) => r.id) : [];
 fs.writeFileSync(dst, md);
 const after = rows.map((r) => r.id);

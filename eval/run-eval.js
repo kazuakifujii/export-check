@@ -110,7 +110,7 @@ async function main() {
     return;
   }
   const { note } = loadNote();
-  console.log(`試験ケース ${cases.length}件 ／ 決まりノート ${note.rows.length}行（確認日 ${note.confirmedOn}）`);
+  console.log(`試験ケース ${cases.length}件 ／ 輸出ルール表 ${note.rows.length}項目（確認日 ${note.confirmedOn}）`);
 
   const results = [];
   const queue = [...cases];
@@ -175,7 +175,7 @@ async function main() {
 
 function toMarkdown(s, results) {
   let md = `# 答え合わせの結果（${s.when}）\n\n`;
-  md += `決まりノート ${s.noteRows}行（確認日 ${s.noteConfirmedOn}）／試験ケース ${s.cases}件\n\n`;
+  md += `輸出ルール表 ${s.noteRows}項目（確認日 ${s.noteConfirmedOn}）／試験ケース ${s.cases}件\n\n`;
   md += `| 項目 | 数 |\n|---|---|\n`;
   for (const k of ["judgedRows", "一致", "一致率", "見落とし", "空振り", "確認に回した", "ずれ", "AIが答えなかった行"]) md += `| ${k === "judgedRows" ? "採点した行" : k} | ${s[k]} |\n`;
   md += `\n「見落とし」＝正解は「無い」（引っかかる）なのに「ある」「対象外」と言った行。いちばん減らしたい数字。\n`;

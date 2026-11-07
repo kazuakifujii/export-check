@@ -1,7 +1,7 @@
 {
   "name": "export-check",
   "version": "0.1.0",
-  "description": "食品ラベルから、米国・EU・中国へ輸出するときに引っかかる所を、決まりノートで総当たりして見せる道具",
+  "description": "食品ラベルから、米国・EU・中国へ輸出するときに引っかかる所を、輸出ルール表で総当たりして見せる道具",
   "type": "module",
   "private": true,
   "license": "MIT",

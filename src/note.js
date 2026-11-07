@@ -1,4 +1,4 @@
-// 決まりノート（Markdown の表）を読み込んで、行の一覧にする。
+// 輸出ルール表（Markdown の表）を読み込んで、行の一覧にする。
 // ノートの表の形（# 列 + 6列、## 国、### 箱）が変わらなければ、
 // ノートを直すだけでプログラムの判定にそのまま反映される。
 
@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const DEFAULT_NOTE_PATH = path.join(here, "..", "rules", "決まりノート.md");
+export const DEFAULT_NOTE_PATH = path.join(here, "..", "rules", "輸出ルール表.md");
 
 export const COUNTRIES = { US: "米国", EU: "EU", CN: "中国" };
 export const BOXES = ["入口", "施設", "交差", "製品"];
