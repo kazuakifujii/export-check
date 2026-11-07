@@ -43,7 +43,7 @@ $("#sample").addEventListener("click", () => {
   $("#preview").hidden = true;
   $("#labelText").value = window.SAMPLES.corn.text;
   state.labelDirty = true;
-  setStatus("サンプル（架空の「とうもろこしごはんの素」）のラベルを入れました。調べたい国のボタンを押してください。");
+  setStatus("サンプル（架空の「とうもろこしごはんの素」）の食品表示をセットしました。②の国のボタンを押すと、調査が始まります。");
 });
 
 function collectAnswers() {
