@@ -1,5 +1,7 @@
 node_modules/
 .env
+.env.*
+!.env.example
 eval/results/*_手元.*
 eval/private/
 *.log

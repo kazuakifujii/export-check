@@ -42,13 +42,26 @@
 
 ## 動かし方
 
-必要なもの：[Node.js](https://nodejs.org/) 22 以上、Claude の API キー
+必要なもの：[Node.js](https://nodejs.org/) 22 以上と、次のどちらか一つ。
 
-```bash
-npm install
-cp .env.example .env      # .env を開いて ANTHROPIC_API_KEY= の後ろに鍵を書く
-npm start                 # http://localhost:3000 を開く
-```
+- **A. Claude の API キー**（ご自身の鍵をお使いください。作者の鍵は入っていません）
+
+  ```bash
+  npm install
+  cp .env.example .env      # .env を開いて ANTHROPIC_API_KEY= の後ろに鍵を書く
+  npm start                 # http://localhost:3000 を開く
+  ```
+
+- **B. Claude Code**（`claude` コマンドにログイン済みなら、API キーは要りません）
+
+  ```bash
+  npm install
+  CLAUDE_BACKEND=claude-code npm start    # http://localhost:3000 を開く
+  ```
+
+鍵が無くても、`npm test` と画面の「決まりノート」タブは動きます。
+
+画面は動かしているパソコンからだけ開けます（同じネットワークの他の機器から鍵を使われないため）。他の機器から開きたい時は `HOST=0.0.0.0 npm start` で起動してください。
 
 ## 答え合わせ（正解つきの試験）
 
@@ -66,3 +79,7 @@ npm test                  # 鍵なしで確かめられる所の試験（ノー�
 - 決まりノートの中身と正解の判定は、食品メーカーで表示と輸出に関わってきた作者の経験で決め、コードは Claude Code と一緒に書きました。
 - 判定には Claude（claude-opus-5-5）を使いますが、Claude の記憶には規則を任せません。根拠は決まりノートの行だけです。
 - 作品に出てくる商品・会社・住所はすべて架空です。
+
+## ライセンス
+
+[MIT License](LICENSE)
