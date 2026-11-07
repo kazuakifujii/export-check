@@ -50,7 +50,10 @@ app.post("/api/check", async (req, res) => {
 });
 
 const port = Number(process.env.PORT || 3000);
-app.listen(port, () => {
+// 動かしているパソコンからだけ開けるようにする（同じWi-Fiの他の機器から開いて、鍵を使われないように）。
+// 他の機器から開きたい時だけ HOST=0.0.0.0 を付けて起動する。
+const host = process.env.HOST || "127.0.0.1";
+app.listen(port, host, () => {
   console.log(`輸出チェック： http://localhost:${port} をブラウザで開いてください（モデル ${MODEL}）`);
   if (process.env.CLAUDE_BACKEND === "claude-code") console.log("判定は Claude Code（claude コマンド）で行います。");
   else if (!process.env.ANTHROPIC_API_KEY) console.log("注意：ANTHROPIC_API_KEY が設定されていません（.env に書いてください）");
