@@ -2,7 +2,7 @@
 //
 //   npm run eval                      … eval/cases/ の公開ケース（架空の商品）
 //   npm run eval -- <フォルダ か まとめた.json> … 別の場所のケースも足す（手元だけの試験データなど）
-//   npm run eval -- --only corn-01,kombu-02 … 指定した件だけ（カンマ区切り）
+//   npm run eval -- --only tai-01,kombu-02 … 指定した件だけ（カンマ区切り）
 //   npm run eval -- <まとめた.json> --no-public … 手元のケースだけ
 //   npm run eval -- --list            … 採点するケースの一覧だけ出す（Claude は呼ばない）
 //
